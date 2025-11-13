@@ -148,3 +148,11 @@ dmypy.json
 # Vercel
 .vercel
 
+# Agent runtime files
+.agent_pids/
+*.pid
+*.log
+
+# Separate project directories
+agentflow101/
+

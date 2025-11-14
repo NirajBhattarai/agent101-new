@@ -3,7 +3,8 @@
 
 [build]
 builder = "NIXPACKS"
-buildCommand = "python3 -m pip install --upgrade pip && python3 -m pip install uv && uv sync"
+# Nixpacks provides Python, use 'python' command (not python3)
+buildCommand = "python -m pip install --upgrade pip && python -m pip install uv && uv sync"
 
 [deploy]
 restartPolicyType = "ON_FAILURE"

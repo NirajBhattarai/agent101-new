@@ -10,6 +10,7 @@ from typing import Any, Dict, Optional
 from web3 import Web3
 from web3.providers import HTTPProvider
 
+from packages.blockchain.dex.abis import UNISWAP_V3_ROUTER_ABI
 from packages.blockchain.hedera.constants import HEDERA_TOKENS
 
 # Default DEX configuration for Hedera (SaucerSwap)
@@ -21,20 +22,6 @@ SAUCERSWAP_DEX_CONFIG = {
 
 # RPC URL for Hedera (use hashio.io for JSON-RPC compatibility)
 HEDERA_MAINNET_RPC = os.getenv("HEDERA_MAINNET_RPC", "https://mainnet.hashio.io/api")
-
-# Router ABI - minimal ABI for getAmountsOut
-ROUTER_ABI = [
-    {
-        "inputs": [
-            {"internalType": "uint256", "name": "amountIn", "type": "uint256"},
-            {"internalType": "address[]", "name": "path", "type": "address[]"},
-        ],
-        "name": "getAmountsOut",
-        "outputs": [{"internalType": "uint256[]", "name": "amounts", "type": "uint256[]"}],
-        "stateMutability": "view",
-        "type": "function",
-    }
-]
 
 
 def get_amounts_out(
@@ -75,7 +62,7 @@ def get_amounts_out(
 
         # Create router contract
         router_contract = w3.eth.contract(
-            address=Web3.to_checksum_address(router_address), abi=ROUTER_ABI
+            address=Web3.to_checksum_address(router_address), abi=UNISWAP_V3_ROUTER_ABI
         )
 
         # Normalize path addresses

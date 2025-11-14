@@ -10,7 +10,7 @@ import { A2AMiddlewareAgent } from "@ag-ui/a2a-middleware";
 export async function POST(request: NextRequest) {
   // STEP 1: Define A2A agent URLs
   const balanceAgentUrl = process.env.BALANCE_AGENT_URL || "http://localhost:9997";
-  // const swapAgentUrl = process.env.SWAP_AGENT_URL || "http://localhost:9995";
+  const swapAgentUrl = process.env.SWAP_AGENT_URL || "http://localhost:9999";
   const multichainLiquidityAgentUrl =
     process.env.MULTICHAIN_LIQUIDITY_AGENT_URL || "http://localhost:9998";
   // const poolCalculatorAgentUrl = process.env.POOL_CALCULATOR_AGENT_URL || "http://localhost:9996";
@@ -36,9 +36,9 @@ export async function POST(request: NextRequest) {
     agentUrls: [
       balanceAgentUrl, // Balance Agent (A2A) - Port 9997
       multichainLiquidityAgentUrl, // Multi-Chain Liquidity Agent (A2A) - Port 9998
+      swapAgentUrl, // Swap Agent (A2A) - Port 9999
       // poolCalculatorAgentUrl, // Pool Calculator Agent (A2A) - Port 9996
       // marketInsightsAgentUrl, // Market Insights Agent (A2A) - Port 9992
-      // swapAgentUrl, // Swap Agent (A2A) - Port 9995
       // swapRouterAgentUrl, // Swap Router Agent (A2A) - Port 9993
       // bridgeAgentUrl, // Bridge Agent (A2A) - Port 9998
     ],
@@ -53,7 +53,15 @@ export async function POST(request: NextRequest) {
          - Can query specific chains or get balances from all chains
          - Provides comprehensive balance data including native token balances, token balances, and USD values
 
-      2. **Multi-Chain Liquidity Agent** (ADK)
+      2. **Swap Agent** (A2A)
+         - Handles token swaps on blockchain chains including Ethereum, Polygon, and Hedera
+         - Supports swapping various tokens (USDC, USDT, HBAR, MATIC, ETH, WBTC, DAI)
+         - Creates swap transactions and tracks their status
+         - Use for queries like "swap 0.1 HBAR to USDC on Hedera" or "swap 10 USDC to ETH on Ethereum"
+         - Returns swap configuration with transaction details
+         - **IMPORTANT**: The orchestrator will first check balance and liquidity before calling this agent
+
+      3. **Multi-Chain Liquidity Agent** (ADK)
          - Fetches liquidity information sequentially from multiple blockchain chains (Hedera, Polygon, Ethereum)
          - Can query specific chains or get liquidity from all chains
          - Supports both token pair queries (e.g., "ETH/USDT") and general chain queries
@@ -129,18 +137,44 @@ export async function POST(request: NextRequest) {
            * Format: "Get liquidity for [token_pair]" or "Get liquidity on [chain]"
            * **NOTE**: Payment settlement will happen automatically AFTER the liquidity response is received
 
-         **For Swap Queries**:
-         - Before doing ANYTHING else when user asks to swap tokens, call 'gather_swap_requirements' to collect essential information
-         - Try to extract any mentioned details from the user's message (account address, chain, token in, token out, amount, slippage)
-         - Pass any extracted values as parameters to pre-fill the form:
-           * accountAddress: Extract account address if mentioned (e.g., "0.0.123456", "0x1234...")
-           * chain: Extract chain if mentioned (e.g., "hedera", "polygon")
-           * tokenInSymbol: Extract token symbol to swap from if mentioned (e.g., "HBAR", "USDC", "MATIC")
-           * tokenOutSymbol: Extract token symbol to swap to if mentioned (e.g., "USDC", "HBAR", "MATIC")
-           * amountIn: Extract amount to swap if mentioned (e.g., "100", "100.0")
-           * slippageTolerance: Extract slippage if mentioned (e.g., "0.5" for 0.5%) or default to "0.5"
-         - Wait for the user to submit the complete requirements
-         - Use the returned values for all subsequent agent calls
+         **For Swap Queries** (CRITICAL - Follow this exact sequence):
+         
+         When a user wants to swap tokens, you MUST follow this sequence:
+         
+         1. **STEP 1: Check Balance** - Call Balance Agent FIRST
+            - Extract account address from user query (if provided)
+            - Extract chain from user query (e.g., "hedera", "polygon", "ethereum")
+            - Extract token_in symbol from user query (the token they want to swap FROM)
+            - Call Balance Agent: "Get balance for [account_address] on [chain]"
+            - Wait for balance response
+            - Check if user has sufficient balance for the swap amount
+            - If balance is insufficient, inform user and STOP - do not proceed to swap
+            - If balance is sufficient, proceed to Step 2
+         
+         2. **STEP 2: Get Pool/Liquidity** - Call Multi-Chain Liquidity Agent
+            - Extract token pair from user query (token_in and token_out)
+            - Extract chain from user query
+            - Call Multi-Chain Liquidity Agent: "Get liquidity for [token_in]/[token_out] on [chain]"
+            - Wait for liquidity response
+            - Verify that a pool exists for the token pair on the specified chain
+            - If no pool exists, inform user and STOP - do not proceed to swap
+            - If pool exists, proceed to Step 3
+         
+         3. **STEP 3: Execute Swap** - Call Swap Agent
+            - Extract all swap parameters: amount, token_in, token_out, chain, account_address, slippage
+            - Call Swap Agent: "Swap [amount] [token_in] to [token_out] on [chain] for [account_address]"
+            - Wait for swap response
+            - Present the swap transaction details to the user
+         
+         **CRITICAL RULES FOR SWAP WORKFLOW**:
+         - ALWAYS call Balance Agent FIRST before Swap Agent
+         - ALWAYS call Multi-Chain Liquidity Agent SECOND to verify pool exists
+         - ALWAYS call Swap Agent LAST to execute the swap
+         - NEVER skip balance check - it's mandatory
+         - NEVER skip liquidity check - it's mandatory
+         - If balance is insufficient, STOP and inform user
+         - If pool doesn't exist, STOP and inform user
+         - Call agents ONE AT A TIME - wait for each response before calling the next
 
          **For Bridge Queries**:
          - Before doing ANYTHING else when user asks to bridge tokens, call 'gather_bridge_requirements' to collect essential information

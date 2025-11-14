@@ -47,7 +47,8 @@ def parse_chain(query: str) -> str:
 def extract_token_symbols(query: str) -> tuple[Optional[str], Optional[str]]:
     """
     Extract token symbols from query without resolving to addresses.
-    Returns raw symbols (e.g., "ETH", "USDT") or addresses if found.
+    Returns raw symbols (e.g., "ETH", "USDT", "MATIC") or addresses if found.
+    Handles formats like "MATIC/USDC", "MATIC-USDC", "MATIC USDC", etc.
     """
     # Pattern for EVM addresses (0x followed by 40 hex chars)
     evm_pattern = r"0x[a-fA-F0-9]{40}"
@@ -62,7 +63,26 @@ def extract_token_symbols(query: str) -> tuple[Optional[str], Optional[str]]:
     # If no addresses found, try to extract token symbols
     query_upper = query.upper()
 
-    # Token symbol pattern (2-10 uppercase letters/numbers)
+    # First, try to match common token pair patterns: TOKEN1/TOKEN2 or TOKEN1-TOKEN2
+    pair_patterns = [
+        r"([A-Z0-9]{2,10})[/\-]([A-Z0-9]{2,10})",  # MATIC/USDC or MATIC-USDC
+        r"([A-Z0-9]{2,10})\s+([A-Z0-9]{2,10})",  # MATIC USDC
+    ]
+    
+    for pattern in pair_patterns:
+        match = re.search(pattern, query_upper)
+        if match:
+            token1, token2 = match.groups()
+            # Basic validation - check they're not excluded words
+            excluded_words = {
+                "FOR", "AND", "THE", "GET", "FIND", "SHOW", "LIQUIDITY", "POOL", "PAIR",
+                "CHAIN", "ETHEREUM", "POLYGON", "HEDERA", "ALL", "MAINNET", "TESTNET",
+                "FEE", "TIER", "BPS", "WITH", "ON", "OF", "TO", "FROM", "NETWORK",
+            }
+            if token1 not in excluded_words and token2 not in excluded_words:
+                return token1, token2
+
+    # Fallback: Token symbol pattern (2-10 uppercase letters/numbers)
     symbol_pattern = r"\b([A-Z0-9]{2,10})\b"
     symbols = re.findall(symbol_pattern, query_upper)
 
@@ -92,6 +112,7 @@ def extract_token_symbols(query: str) -> tuple[Optional[str], Optional[str]]:
         "OF",
         "TO",
         "FROM",
+        "NETWORK",
     }
 
     # Extract potential token symbols

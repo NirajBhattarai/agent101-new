@@ -42,7 +42,8 @@ def main():
         print("   Get a key from: https://aistudio.google.com/app/apikey")
         print()
 
-    port = int(os.getenv("ORCHESTRATOR_PORT", DEFAULT_PORT))
+    # Railway uses PORT env var, fallback to ORCHESTRATOR_PORT or DEFAULT_PORT
+    port = int(os.getenv("PORT", os.getenv("ORCHESTRATOR_PORT", DEFAULT_PORT)))
     print(f"🚀 Starting Orchestrator Agent (ADK + AG-UI) on http://0.0.0.0:{port}")
     uvicorn.run(app, host="0.0.0.0", port=port)
 

@@ -10,11 +10,13 @@ from packages.blockchain.ethereum.constants import ETHEREUM_TOKENS
 from packages.blockchain.hedera.constants import HEDERA_TOKENS
 from packages.blockchain.polygon.constants import POLYGON_TOKENS
 
-# Special mappings: ETH -> WETH for DEX pools (since ETH is native, we use wrapped version)
+# Special mappings: Native tokens -> Wrapped tokens for DEX pools
 SYMBOL_ALIASES = {
     "ETH": "WETH",  # On Ethereum and Polygon, ETH maps to WETH for DEX pools
     "ETHER": "WETH",
     "ETHERUM": "WETH",
+    "MATIC": "WMATIC",  # On Polygon, MATIC maps to WMATIC for DEX pools
+    "HBAR": "WHBAR",  # On Hedera, HBAR maps to WHBAR for DEX pools (if needed)
 }
 
 

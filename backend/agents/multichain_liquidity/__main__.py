@@ -20,7 +20,8 @@ from a2a.types import AgentCapabilities, AgentCard, AgentSkill
 
 from .executor import LiquidityExecutor
 
-port = int(os.getenv("LIQUIDITY_PORT", 9998))
+# Railway uses PORT env var, fallback to LIQUIDITY_PORT or default
+port = int(os.getenv("PORT", os.getenv("LIQUIDITY_PORT", 9998)))
 
 skill = AgentSkill(
     id="multichain_liquidity_agent",

@@ -2,7 +2,7 @@
 	backend-dev backend-install backend-format backend-lint backend-test \
 	backend-test-saucerswap backend-test-saucerswap-coverage backend-test-all backend-test-watch \
 	backend-test-ethereum backend-test-polygon backend-test-uniswap \
-	agent-orchestrator agent-liquidity agent-balance agents-start agents-stop agents-status agents-restart help
+	agent-orchestrator agent-liquidity agent-balance agent-swap agents-start agents-stop agents-status agents-restart help
 
 # Default target
 help:
@@ -38,10 +38,16 @@ help:
 	@echo "  make agent-orchestrator           - Start Orchestrator Agent (port 9000)"
 	@echo "  make agent-liquidity              - Start Multi-Chain Liquidity Agent (port 9998)"
 	@echo "  make agent-balance                - Start Balance Agent (port 9997)"
-	@echo "  make agents-start                - Start all agents (orchestrator + liquidity + balance)"
+	@echo "  make agent-swap                   - Start Swap Agent (port 9999)"
+	@echo "  make agents-start                - Start all agents (orchestrator + liquidity + balance + swap)"
 	@echo "  make agents-stop                 - Stop all running agents"
 	@echo "  make agents-status               - Check status of all agents"
 	@echo "  make agents-restart              - Restart all agents"
+	@echo ""
+	@echo "Note: Swap workflow requires all agents running:"
+	@echo "  Orchestrator -> Balance Agent -> Orchestrator (check balance)"
+	@echo "  Orchestrator -> Liquidity Agent -> Orchestrator (get pool/liquidity)"
+	@echo "  Orchestrator -> Swap Agent -> Orchestrator (execute swap)"
 
 # Install frontend dependencies
 frontend-install:
@@ -133,7 +139,7 @@ backend-test-uniswap:
 	cd backend && uv run pytest packages/blockchain/ethereum/uniswap/__test__/ packages/blockchain/polygon/uniswap/__test__/ -v
 
 # Agent server targets (similar to agentflow101)
-.PHONY: agents-start agents-stop agents-status agents-restart agent-orchestrator agent-liquidity agent-balance
+.PHONY: agents-start agents-stop agents-status agents-restart agent-orchestrator agent-liquidity agent-balance agent-swap
 
 # Individual agent targets (can be run separately)
 agent-orchestrator:
@@ -151,12 +157,24 @@ agent-balance:
 	@echo "   Balance Agent: http://0.0.0.0:9997"
 	cd backend && uv run -m agents.balance
 
+agent-swap:
+	@echo "💱 Starting Swap Agent..."
+	@echo "   Swap Agent: http://0.0.0.0:9999"
+	cd backend && uv run -m agents.swap
+
 # Start all agents in parallel (similar to agentflow101's dev-all-agents)
+# Swap workflow: Orchestrator coordinates Balance -> Liquidity -> Swap agents
 agents-start:
 	@echo "🚀 Starting all agents..."
 	@echo "   Orchestrator Agent: http://0.0.0.0:9000"
 	@echo "   Multi-Chain Liquidity Agent: http://0.0.0.0:9998"
 	@echo "   Balance Agent: http://0.0.0.0:9997"
+	@echo "   Swap Agent: http://0.0.0.0:9999"
+	@echo ""
+	@echo "📋 Swap Workflow:"
+	@echo "   1. Orchestrator -> Balance Agent (check balance)"
+	@echo "   2. Orchestrator -> Liquidity Agent (get pool/liquidity)"
+	@echo "   3. Orchestrator -> Swap Agent (execute swap)"
 	@echo ""
 	@echo "🛑 Stopping any existing agents..."
 	@$(MAKE) agents-stop >/dev/null 2>&1 || true
@@ -168,7 +186,7 @@ agents-start:
 	@echo "Starting agents in parallel (logs will appear in terminal)..."
 	@echo "Press Ctrl+C to stop all agents"
 	@echo ""
-	@make -j3 agent-orchestrator agent-liquidity agent-balance
+	@make -j4 agent-orchestrator agent-liquidity agent-balance agent-swap
 
 # Stop all running agents (without using PID files)
 agents-stop:
@@ -176,6 +194,7 @@ agents-stop:
 	@pkill -f "agents.orchestrator.orchestrator" 2>/dev/null && echo "  ✓ Stopped Orchestrator Agent" || echo "  ⚠ Orchestrator Agent not running"
 	@pkill -f "agents.multichain_liquidity" 2>/dev/null && echo "  ✓ Stopped Liquidity Agent" || echo "  ⚠ Liquidity Agent not running"
 	@pkill -f "agents.balance" 2>/dev/null && echo "  ✓ Stopped Balance Agent" || echo "  ⚠ Balance Agent not running"
+	@pkill -f "agents.swap" 2>/dev/null && echo "  ✓ Stopped Swap Agent" || echo "  ⚠ Swap Agent not running"
 	@rm -rf $(AGENT_PID_DIR) 2>/dev/null || true
 	@sleep 1
 	@echo "✅ All agents stopped"
@@ -184,29 +203,25 @@ agents-stop:
 agents-status:
 	@echo "📊 Agent Status:"
 	@echo ""
-	@if [ -d "$(AGENT_PID_DIR)" ]; then \
-		if [ -f "$(AGENT_PID_DIR)/orchestrator.pid" ]; then \
-			PID=$$(cat $(AGENT_PID_DIR)/orchestrator.pid 2>/dev/null); \
-			if [ -n "$$PID" ] && kill -0 $$PID 2>/dev/null; then \
-				echo "  ✅ Orchestrator Agent: Running (PID: $$PID, Port: 9000)"; \
-			else \
-				echo "  ❌ Orchestrator Agent: Not running"; \
-			fi; \
-		else \
-			echo "  ❌ Orchestrator Agent: Not started"; \
-		fi; \
-		if [ -f "$(AGENT_PID_DIR)/liquidity.pid" ]; then \
-			PID=$$(cat $(AGENT_PID_DIR)/liquidity.pid 2>/dev/null); \
-			if [ -n "$$PID" ] && kill -0 $$PID 2>/dev/null; then \
-				echo "  ✅ Liquidity Agent: Running (PID: $$PID, Port: 9998)"; \
-			else \
-				echo "  ❌ Liquidity Agent: Not running"; \
-			fi; \
-		else \
-			echo "  ❌ Liquidity Agent: Not started"; \
-		fi; \
+	@if pgrep -f "agents.orchestrator.orchestrator" > /dev/null; then \
+		echo "  ✅ Orchestrator Agent: Running (Port: 9000)"; \
 	else \
-		echo "  ❌ No agents started (PID directory not found)"; \
+		echo "  ❌ Orchestrator Agent: Not running"; \
+	fi
+	@if pgrep -f "agents.multichain_liquidity" > /dev/null; then \
+		echo "  ✅ Multi-Chain Liquidity Agent: Running (Port: 9998)"; \
+	else \
+		echo "  ❌ Multi-Chain Liquidity Agent: Not running"; \
+	fi
+	@if pgrep -f "agents.balance" > /dev/null; then \
+		echo "  ✅ Balance Agent: Running (Port: 9997)"; \
+	else \
+		echo "  ❌ Balance Agent: Not running"; \
+	fi
+	@if pgrep -f "agents.swap" > /dev/null; then \
+		echo "  ✅ Swap Agent: Running (Port: 9999)"; \
+	else \
+		echo "  ❌ Swap Agent: Not running"; \
 	fi
 	@echo ""
 

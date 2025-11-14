@@ -1,7 +1,7 @@
 """
 Uniswap swap client for Polygon.
 
-Handles swap configuration and preparation for Polygon chain using Uniswap V3.
+Handles swap configuration and preparation for Polygon chain using Uniswap V2 Router 02.
 """
 
 import os
@@ -10,13 +10,13 @@ from typing import Any, Dict, Optional
 from web3 import Web3
 from web3.providers import HTTPProvider
 
-from packages.blockchain.dex.abis import UNISWAP_V3_ROUTER_ABI
+from packages.blockchain.dex.abis import UNISWAP_V2_ROUTER_ABI
 from packages.blockchain.polygon.constants import POLYGON_TOKENS
 
-# Default DEX configuration for Polygon (Uniswap V3)
+# Default DEX configuration for Polygon (Uniswap V2 Router 02)
 UNISWAP_POLYGON_DEX_CONFIG = {
-    "name": "Uniswap V3",
-    "router_address": "0xE592427A0AEce92De3Edee1F18E0157C05861564",  # Uniswap V3 Router
+    "name": "Uniswap V2",
+    "router_address": "0xedf6066a2b290c185783862c7f4776a2c8077ad1",  # Uniswap V2 Router 02 on Polygon
     "default_fee_percent": 0.3,
 }
 
@@ -32,11 +32,7 @@ def get_amounts_out(
     rpc_url: str,
 ) -> Optional[list[int]]:
     """
-    Get expected output amounts for Polygon swaps.
-    
-    Note: Uniswap V3 router doesn't have getAmountsOut (that's V2).
-    For V3, we would need to use the Quoter contract, but for now we'll skip
-    the router call and use estimation.
+    Call router.getAmountsOut to get expected output amounts (Uniswap V2 Router 02).
 
     Args:
         amount_in: Input amount as string (human-readable)
@@ -46,12 +42,44 @@ def get_amounts_out(
         rpc_url: RPC URL for web3 connection
 
     Returns:
-        None (Uniswap V3 doesn't support getAmountsOut on router)
+        List of amounts (in wei/smallest unit) or None if call fails
     """
-    # Uniswap V3 router doesn't have getAmountsOut - it uses a separate Quoter contract
-    # For now, return None to use estimation
-    print("ℹ️  Uniswap V3 doesn't support getAmountsOut on router (uses Quoter contract)")
-    return None
+    try:
+        # Get token decimals for amount conversion
+        token_in_upper = token_in_symbol.upper()
+        # Map MATIC to WMATIC for decimals lookup
+        if token_in_upper == "MATIC":
+            token_in_upper = "WMATIC"
+        
+        if token_in_upper not in POLYGON_TOKENS:
+            return None
+
+        decimals = POLYGON_TOKENS[token_in_upper].get("decimals", 18)
+        amount_float = float(amount_in)
+        amount_in_wei = int(amount_float * (10**decimals))
+
+        # Initialize web3
+        w3 = Web3(HTTPProvider(rpc_url))
+        if not w3.is_connected():
+            print(f"⚠️ Failed to connect to RPC: {rpc_url}")
+            return None
+
+        # Create router contract (V2 Router 02)
+        router_contract = w3.eth.contract(
+            address=Web3.to_checksum_address(router_address), abi=UNISWAP_V2_ROUTER_ABI
+        )
+
+        # Normalize path addresses
+        normalized_path = [Web3.to_checksum_address(addr) for addr in swap_path]
+
+        # Call getAmountsOut (V2 router supports this)
+        amounts = router_contract.functions.getAmountsOut(amount_in_wei, normalized_path).call()
+
+        print(f"✅ getAmountsOut result: {amounts} for path {swap_path}")
+        return amounts
+    except Exception as e:
+        print(f"⚠️ Error calling getAmountsOut: {e}")
+        return None
 
 
 def get_token_address_polygon(token_symbol: str) -> Optional[str]:
@@ -87,7 +115,7 @@ def get_swap_polygon(
     dex_name: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
-    Get swap configuration for Polygon chain using Uniswap V3.
+    Get swap configuration for Polygon chain using Uniswap V2 Router 02.
 
     Args:
         token_in_symbol: Token symbol to swap from (e.g., "MATIC", "USDC")
@@ -95,15 +123,15 @@ def get_swap_polygon(
         amount_in: Amount to swap (human-readable format)
         account_address: Account address for the swap
         slippage_tolerance: Slippage tolerance percentage (default: 0.5)
-        dex_name: Optional DEX name (default: uses Uniswap V3)
+        dex_name: Optional DEX name (default: uses Uniswap V2 Router 02)
 
     Returns:
         Dictionary with swap configuration including addresses, paths, etc.
     """
-    # Get DEX configuration (Uniswap V3)
+    # Get DEX configuration (Uniswap V2 Router 02)
     dex_config = UNISWAP_POLYGON_DEX_CONFIG
-    dex_name_actual = dex_config.get("name", "Uniswap V3")
-    router_address = dex_config.get("router_address", "0xE592427A0AEce92De3Edee1F18E0157C05861564")
+    dex_name_actual = dex_config.get("name", "Uniswap V2")
+    router_address = dex_config.get("router_address", "0xedf6066a2b290c185783862c7f4776a2c8077ad1")
 
     # Normalize token symbols (MATIC -> WMATIC for swaps)
     token_in_normalized = "WMATIC" if token_in_symbol.upper() == "MATIC" else token_in_symbol.upper()

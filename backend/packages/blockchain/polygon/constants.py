@@ -44,4 +44,8 @@ POLYGON_TOKENS = {
         "address": "0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270",
         "decimals": 18,
     },
+    "MATIC": {
+        "address": "0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270",  # Same as WMATIC - native MATIC uses wrapped version
+        "decimals": 18,
+    },
 }

@@ -99,6 +99,7 @@ def _match_token_patterns(query_lower: str, all_tokens: list) -> Optional[Tuple[
         r"(\d+\.?\d*)\s+([A-Za-z]+)\s+to\s+([A-Za-z]+)",
         r"([A-Za-z]+)\s+to\s+([A-Za-z]+)",
         r"([A-Za-z]+)\s+for\s+([A-Za-z]+)",
+        r"([A-Za-z]+)\s+with\s+([A-Za-z]+)",  # "swap usdc with matic"
         r"([A-Za-z]+)\s*->\s*([A-Za-z]+)",
         r"([A-Za-z]+)\s*=>\s*([A-Za-z]+)",
     ]
@@ -110,8 +111,22 @@ def _match_token_patterns(query_lower: str, all_tokens: list) -> Optional[Tuple[
                 token1, token2 = groups[1].upper(), groups[2].upper()
             else:
                 token1, token2 = groups[0].upper(), groups[1].upper()
-            if token1 in all_tokens and token2 in all_tokens:
-                return token1, token2
+            
+            # Normalize MATIC/WMATIC - treat them as the same
+            if token1 == "MATIC":
+                token1 = "WMATIC" if "WMATIC" in all_tokens else token1
+            if token2 == "MATIC":
+                token2 = "WMATIC" if "WMATIC" in all_tokens else token2
+            
+            # Check if tokens are valid (allow MATIC even if only WMATIC in list)
+            token1_valid = token1 in all_tokens or (token1 == "MATIC" and "WMATIC" in all_tokens)
+            token2_valid = token2 in all_tokens or (token2 == "MATIC" and "WMATIC" in all_tokens)
+            
+            if token1_valid and token2_valid:
+                # Return original case (MATIC) if user said MATIC, even if we normalized internally
+                original_token1 = "MATIC" if groups[1 if len(groups) == 3 else 0].upper() == "MATIC" else token1
+                original_token2 = "MATIC" if groups[2 if len(groups) == 3 else 1].upper() == "MATIC" else token2
+                return original_token1, original_token2
     return None
 
 
@@ -136,10 +151,20 @@ def _find_tokens_by_position(
 
     for token in all_tokens:
         token_lower = token.lower()
+        # Use word boundaries to avoid matching "polygon" when looking for tokens
+        # But allow MATIC to match even if "polygon" is in the query
+        if token_lower == "polygon":
+            continue  # Skip "polygon" as it's a chain name, not a token
         if token_lower in query_lower:
             if chain and token in chain_tokens:
                 found_tokens.append(token)
                 token_positions[token] = query_lower.find(token_lower)
+        # Also check for MATIC normalization (MATIC = WMATIC for Polygon)
+        elif chain == CHAIN_POLYGON and token_lower == "wmatic" and "matic" in query_lower:
+            # If query has "matic" but token list has "wmatic", add wmatic
+            if "WMATIC" in chain_tokens:
+                found_tokens.append("WMATIC")
+                token_positions["WMATIC"] = query_lower.find("matic")
 
     if token_positions:
         found_tokens = sorted(found_tokens, key=lambda t: token_positions.get(t, 999999))
@@ -147,7 +172,11 @@ def _find_tokens_by_position(
     if len(found_tokens) >= 2:
         return found_tokens[0], found_tokens[1]
     if len(found_tokens) == 1:
-        default_out = "USDC" if chain == CHAIN_HEDERA else "USDT"
+        # For Polygon, if only one token found and it's USDC, default to MATIC (native token)
+        if chain == CHAIN_POLYGON and found_tokens[0] == "USDC":
+            return found_tokens[0], "MATIC"
+        # For other chains, use chain-specific defaults
+        default_out = "USDC" if chain == CHAIN_HEDERA else ("MATIC" if chain == CHAIN_POLYGON else "USDT")
         return found_tokens[0], default_out
     return None, None
 
@@ -174,7 +203,16 @@ def extract_token_symbols(
             elif chain == CHAIN_ETHEREUM:
                 chain_tokens = ETHEREUM_TOKENS
 
-            if token_in in chain_tokens and token_out in chain_tokens:
+            # For Polygon, MATIC and WMATIC are the same (MATIC is native, WMATIC is wrapped)
+            # Allow MATIC even if only WMATIC is in constants
+            if chain == CHAIN_POLYGON:
+                token_in_normalized = "WMATIC" if token_in == "MATIC" else token_in
+                token_out_normalized = "WMATIC" if token_out == "MATIC" else token_out
+                if (token_in in chain_tokens or token_in_normalized in chain_tokens) and (
+                    token_out in chain_tokens or token_out_normalized in chain_tokens
+                ):
+                    return token_in, token_out
+            elif token_in in chain_tokens and token_out in chain_tokens:
                 return token_in, token_out
         return token_in, token_out
     return _find_tokens_by_position(query_lower, all_tokens, chain if chain_specified else None)

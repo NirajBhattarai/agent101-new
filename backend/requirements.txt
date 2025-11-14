@@ -13,4 +13,5 @@ python-dotenv>=1.0.0
 google-adk>=1.18.0
 web3>=6.15.0
 ag-ui-adk>=0.0.1
+# hiero-sdk-python>=0.1.0  # Optional - install manually if needed (has dependency conflicts)
 

@@ -8,7 +8,7 @@ from typing import Optional
 
 from pydantic import BaseModel, Field
 
-from ..constants import RESPONSE_TYPE
+from ..constants import DEFAULT_TOTAL_USD_VALUE, RESPONSE_TYPE
 
 
 class TokenBalance(BaseModel):
@@ -29,7 +29,16 @@ class StructuredBalance(BaseModel):
 
     type: str = Field(default=RESPONSE_TYPE, description="Response type")
     chain: str = Field(description="Chain name: ethereum, polygon, hedera, or all")
-    account_address: str = Field(description="Account address queried")
-    balances: list[TokenBalance] = Field(description="List of token balances")
-    total_usd_value: str = Field(description="Total USD value estimate")
+    account_address: str = Field(default="N/A", description="Account address queried")
+    balances: list[TokenBalance] = Field(default_factory=list, description="List of token balances")
+    total_usd_value: str = Field(
+        default=DEFAULT_TOTAL_USD_VALUE, description="Total USD value estimate"
+    )
     error: Optional[str] = Field(default=None, description="Error message if any")
+    query_type: Optional[str] = Field(
+        default=None, description="Type of query (e.g., token_discovery)"
+    )
+    success: Optional[bool] = Field(
+        default=None, description="Success indicator for discovery queries"
+    )
+    discovery_result: Optional[dict] = Field(default=None, description="Token discovery results")

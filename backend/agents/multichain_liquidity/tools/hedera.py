@@ -34,7 +34,7 @@ def get_hedera_liquidity(token_a: str, token_b: str, fee: int = 3000) -> dict:
             whbar_info = HEDERA_TOKENS.get("WHBAR", {})
             token_a = whbar_info.get("address", token_a)
             print(f"🔄 Converted HBAR to wHBAR for pool lookup: {token_a}")
-        
+
         if token_b == HBAR_NATIVE_ADDRESS:
             whbar_info = HEDERA_TOKENS.get("WHBAR", {})
             token_b = whbar_info.get("address", token_b)
@@ -49,8 +49,10 @@ def get_hedera_liquidity(token_a: str, token_b: str, fee: int = 3000) -> dict:
         print(f"🔍 Client type: {type(client).__name__}")
         print(f"🔍 Has get_pool_info override: {hasattr(client, 'get_pool_info')}")
         print(f"🔍 get_pool_info method: {client.get_pool_info}")
-        print(f"🔍 HEDERA_FEE_TIERS: {client._fee_tiers if hasattr(client, '_fee_tiers') else 'N/A'}")
-        
+        print(
+            f"🔍 HEDERA_FEE_TIERS: {client._fee_tiers if hasattr(client, '_fee_tiers') else 'N/A'}"
+        )
+
         # Try all fee tiers (get_pool_info will try all Hedera fee tiers: 500, 1500, 3000, 10000)
         pool_info = client.get_pool_info(token_a, token_b, fee=fee)
         print(f"🔍 Pool info result: {pool_info}")
@@ -61,13 +63,13 @@ def get_hedera_liquidity(token_a: str, token_b: str, fee: int = 3000) -> dict:
             liquidity = pool_info.get("liquidity", 0)
             slot0 = pool_info.get("slot0", {})
             found_fee = pool_info.get("fee", fee)
-            
+
             # Extract slot0 data
             tick = slot0.get("tick", 0) if isinstance(slot0, dict) else 0
             sqrt_price_x96 = slot0.get("sqrtPriceX96", 0) if isinstance(slot0, dict) else 0
-            
+
             print(f"✅ Found pool: address={pool_address}, fee={found_fee}, liquidity={liquidity}")
-            
+
             return {
                 "chain": "hedera",
                 "network": "mainnet",

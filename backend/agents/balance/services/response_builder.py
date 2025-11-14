@@ -13,6 +13,7 @@ from ..core.constants import (
     CHAIN_POLYGON,
     DEFAULT_TOTAL_USD_VALUE,
     RESPONSE_TYPE,
+    WEB_SEARCH_TIMEOUT,
 )
 from ..tools import (
     get_balance_all_chains,
@@ -23,33 +24,13 @@ from ..tools import (
 from ..tools.token_discovery import (
     get_popular_tokens,
     search_token_contract_address,
-    search_token_on_web,
 )
+from .token_filter import filter_balances_by_token
 
 
 def add_chain_to_balances(balances: list, chain: str) -> list:
     """Add chain information to balance entries."""
     return [{**balance, "chain": chain} for balance in balances]
-
-
-def build_all_chains_response(account_address: str) -> dict:
-    """Build response for all chains."""
-    result = get_balance_all_chains(account_address)
-    if result.get("type") == "balance_summary":
-        # Extract balances from each chain
-        all_balances = []
-        for chain_name, chain_result in result.get("chains", {}).items():
-            chain_balances = chain_result.get("balances", [])
-            all_balances.extend(add_chain_to_balances(chain_balances, chain_name))
-
-        return {
-            "type": RESPONSE_TYPE,
-            "chain": CHAIN_ALL,
-            "account_address": account_address,
-            "balances": all_balances,
-            "total_usd_value": DEFAULT_TOTAL_USD_VALUE,
-        }
-    return result
 
 
 def build_unknown_chain_response(chain: str, account_address: str) -> dict:
@@ -90,22 +71,13 @@ def build_balance_response(
 
     # Filter balances by token_symbol if provided
     if token_symbol and result.get("balances"):
-        token_symbol_upper = token_symbol.upper()
-        filtered_balances = [
-            balance
-            for balance in result.get("balances", [])
-            if balance.get("token_symbol", "").upper() == token_symbol_upper
-        ]
-        result["balances"] = filtered_balances
-        # Update token_symbol in response for clarity
+        result["balances"] = filter_balances_by_token(result["balances"], token_symbol)
         result["token_symbol"] = token_symbol
 
     return result
 
 
-def build_token_balance_response(
-    chain: str, account_address: str, token_symbol: str
-) -> dict:
+def build_token_balance_response(chain: str, account_address: str, token_symbol: str) -> dict:
     """
     Build balance response for a specific token on a specific chain.
 
@@ -124,25 +96,37 @@ def build_token_balance_response(
 
     # Check if token was found (result is already filtered by build_balance_response)
     balances = result.get("balances", [])
-    token_found = len(balances) > 0 and any(
-        balance.get("token_symbol", "").upper() == token_symbol.upper()
-        for balance in balances
-    )
+    token_found = len(balances) > 0
 
     if token_found:
         # Ensure result only contains the requested token (double-check filtering)
-        filtered_balances = [
-            balance
-            for balance in balances
-            if balance.get("token_symbol", "").upper() == token_symbol.upper()
-        ]
-        result["balances"] = filtered_balances
+        result["balances"] = filter_balances_by_token(balances, token_symbol)
         result["token_symbol"] = token_symbol
         return result
 
-    # Token not found in config, try web search
+    # Token not found in config, try web search with timeout
     print(f"🔍 Token {token_symbol} not found in config for {chain}, searching web...")
-    token_info = search_token_contract_address(token_symbol, chain)
+    try:
+        import signal
+
+        def timeout_handler(signum, frame):
+            raise TimeoutError(f"Web search timed out after {WEB_SEARCH_TIMEOUT} seconds")
+
+        # Set timeout for web search (Unix only)
+        if hasattr(signal, "SIGALRM"):
+            signal.signal(signal.SIGALRM, timeout_handler)
+            signal.alarm(WEB_SEARCH_TIMEOUT)
+
+        token_info = search_token_contract_address(token_symbol, chain)
+
+        if hasattr(signal, "SIGALRM"):
+            signal.alarm(0)  # Cancel alarm
+    except TimeoutError as e:
+        print(f"⏱️ {e}")
+        token_info = None
+    except Exception as e:
+        print(f"❌ Error during web search: {e}")
+        token_info = None
 
     if token_info:
         contract_address = token_info.get("contract_address")
@@ -151,11 +135,7 @@ def build_token_balance_response(
             result = build_balance_response(chain, account_address, contract_address)
             # Filter to ensure only the requested token is returned
             if result.get("balances"):
-                filtered_balances = [
-                    balance
-                    for balance in result.get("balances", [])
-                    if balance.get("token_symbol", "").upper() == token_symbol.upper()
-                ]
+                filtered_balances = filter_balances_by_token(result["balances"], token_symbol)
                 if filtered_balances:
                     result["balances"] = filtered_balances
                     result["token_symbol"] = token_symbol
@@ -169,15 +149,12 @@ def build_token_balance_response(
         "token_symbol": token_symbol,
         "balances": [],
         "total_usd_value": DEFAULT_TOTAL_USD_VALUE,
-        "error": f"Token {token_symbol} not found on {chain}. "
-        "Could not resolve contract address.",
+        "error": f"Token {token_symbol} not found on {chain}. Could not resolve contract address.",
         "search_attempted": True,
     }
 
 
-def build_all_chains_token_response(
-    account_address: str, token_symbol: str
-) -> dict:
+def build_all_chains_token_response(account_address: str, token_symbol: str) -> dict:
     """
     Build balance response for a token across all supported chains.
 
@@ -194,12 +171,9 @@ def build_all_chains_token_response(
     for chain in chains:
         chain_result = build_token_balance_response(chain, account_address, token_symbol)
         chain_balances = chain_result.get("balances", [])
-        # Filter to only include the requested token
-        token_balances = [
-            {**balance, "chain": chain}
-            for balance in chain_balances
-            if balance.get("token_symbol", "").upper() == token_symbol.upper()
-        ]
+        # Filter to only include the requested token and add chain info
+        filtered_balances = filter_balances_by_token(chain_balances, token_symbol)
+        token_balances = [{**balance, "chain": chain} for balance in filtered_balances]
         all_balances.extend(token_balances)
 
     return {
@@ -212,20 +186,25 @@ def build_all_chains_token_response(
     }
 
 
-def build_popular_tokens_response(account_address: str) -> dict:
+def build_popular_tokens_response(account_address: Optional[str]) -> dict:
     """
     Build balance response for popular tokens across all chains.
 
     Args:
-        account_address: Account address
+        account_address: Account address (optional for popular tokens query)
 
     Returns:
         Combined balance response for popular tokens
     """
+    # Use default address if not provided (for popular tokens query)
+    if not account_address:
+        account_address = "N/A"
+
     popular_tokens = get_popular_tokens()
     all_balances = []
 
-    for token_info in popular_tokens[:10]:  # Limit to top 10
+    # Limit to 5 tokens to avoid rate limits
+    for token_info in popular_tokens[:5]:
         token_symbol = token_info.get("symbol", "")
         if not token_symbol:
             continue
@@ -233,15 +212,10 @@ def build_popular_tokens_response(account_address: str) -> dict:
         # Query across all chains
         chains = [CHAIN_ETHEREUM, CHAIN_POLYGON, CHAIN_HEDERA]
         for chain in chains:
-            chain_result = build_token_balance_response(
-                chain, account_address, token_symbol
-            )
+            chain_result = build_token_balance_response(chain, account_address, token_symbol)
             chain_balances = chain_result.get("balances", [])
-            token_balances = [
-                {**balance, "chain": chain}
-                for balance in chain_balances
-                if balance.get("token_symbol", "").upper() == token_symbol.upper()
-            ]
+            filtered_balances = filter_balances_by_token(chain_balances, token_symbol)
+            token_balances = [{**balance, "chain": chain} for balance in filtered_balances]
             all_balances.extend(token_balances)
 
     return {
@@ -254,11 +228,73 @@ def build_popular_tokens_response(account_address: str) -> dict:
     }
 
 
-def build_all_chains_response(
-    account_address: str, token_symbol: Optional[str] = None
-) -> dict:
+def build_token_discovery_response(discovery_result: dict) -> dict:
+    """
+    Build response for token discovery results.
+    Formats tokens as balance entries so orchestrator can understand the response.
+
+    Args:
+        discovery_result: Result from fetch_popular_tokens
+
+    Returns:
+        Formatted response dictionary with tokens formatted as balance entries
+    """
+    if discovery_result.get("status") == "error":
+        return {
+            "type": RESPONSE_TYPE,
+            "chain": CHAIN_ALL,
+            "account_address": "N/A",
+            "balances": [],
+            "total_usd_value": DEFAULT_TOTAL_USD_VALUE,
+            "error": discovery_result.get("error", "Failed to discover tokens"),
+            "query_type": "token_discovery",
+            "success": False,
+        }
+
+    tokens_by_chain = discovery_result.get("tokens_by_chain", {})
+    total_tokens = discovery_result.get("total_tokens", 0)
+
+    # Format tokens as balance entries for better visibility
+    balance_entries = []
+    for chain_name, tokens in tokens_by_chain.items():
+        for token in tokens:
+            balance_entries.append(
+                {
+                    "token_type": "token",
+                    "token_symbol": token.get("symbol", ""),
+                    "token_address": token.get("address", ""),
+                    "chain": chain_name,
+                    "balance": "0",  # Discovery doesn't fetch balances
+                    "balance_raw": "0",
+                    "decimals": token.get("decimals", 18),
+                    "name": token.get("name", ""),
+                }
+            )
+
+    # Format as balance-like response with clear success indicator
+    return {
+        "type": RESPONSE_TYPE,
+        "chain": CHAIN_ALL,
+        "account_address": "N/A",
+        "balances": balance_entries,
+        "total_usd_value": DEFAULT_TOTAL_USD_VALUE,
+        "query_type": "token_discovery",
+        "success": True,
+        "discovery_result": {
+            "status": "success",
+            "total_tokens": total_tokens,
+            "tokens_by_chain": tokens_by_chain,
+            "message": discovery_result.get(
+                "message", f"Successfully discovered {total_tokens} popular tokens across chains"
+            ),
+        },
+    }
+
+
+def build_all_chains_response(account_address: str, token_symbol: Optional[str] = None) -> dict:
     """
     Build response for all chains.
+    Consolidated function that handles both general all-chains and token-specific queries.
 
     Args:
         account_address: Account address
@@ -271,19 +307,18 @@ def build_all_chains_response(
         for chain_name, chain_result in result.get("chains", {}).items():
             chain_balances = chain_result.get("balances", [])
             if token_symbol:
-                # Filter by token symbol
-                chain_balances = [
-                    balance
-                    for balance in chain_balances
-                    if balance.get("token_symbol", "").upper() == token_symbol.upper()
-                ]
+                # Filter by token symbol using centralized utility
+                chain_balances = filter_balances_by_token(chain_balances, token_symbol)
             all_balances.extend(add_chain_to_balances(chain_balances, chain_name))
 
-        return {
+        response = {
             "type": RESPONSE_TYPE,
             "chain": CHAIN_ALL,
             "account_address": account_address,
             "balances": all_balances,
             "total_usd_value": DEFAULT_TOTAL_USD_VALUE,
         }
+        if token_symbol:
+            response["token_symbol"] = token_symbol
+        return response
     return result

@@ -19,7 +19,7 @@ from .token_resolver import resolve_token_pair
 def detect_chain_from_query(query: str) -> Optional[str]:
     """Detect chain from query text."""
     query_lower = query.lower()
-    
+
     # Priority order: Check specific chains first, then "all"
     # Check for "on hedera" or "hedera" - highest priority
     if " on hedera" in query_lower or "hedera" in query_lower:

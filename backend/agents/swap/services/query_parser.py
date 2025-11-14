@@ -43,19 +43,33 @@ def extract_chain(query: str) -> Tuple[str, bool]:
 
 
 def _get_all_token_symbols(chain: str) -> list:
-    """Get all available token symbols for a chain."""
+    """Get all available token symbols for a chain, including discovered tokens."""
     from packages.blockchain.ethereum.constants import ETHEREUM_TOKENS
     from packages.blockchain.hedera.constants import HEDERA_TOKENS
     from packages.blockchain.polygon.constants import POLYGON_TOKENS
+    from packages.blockchain.token_discovery import get_all_tokens_for_chain
 
+    # Get tokens from cache first
+    cached_tokens = get_all_tokens_for_chain(chain)
+    cached_symbols = [token["symbol"] for token in cached_tokens]
+
+    # Also get from constants
     if chain == CHAIN_HEDERA:
-        return list(HEDERA_TOKENS.keys())
-    if chain == CHAIN_POLYGON:
-        return list(POLYGON_TOKENS.keys())
-    if chain == CHAIN_ETHEREUM:
-        return list(ETHEREUM_TOKENS.keys())
+        constant_symbols = list(HEDERA_TOKENS.keys())
+    elif chain == CHAIN_POLYGON:
+        constant_symbols = list(POLYGON_TOKENS.keys())
+    elif chain == CHAIN_ETHEREUM:
+        constant_symbols = list(ETHEREUM_TOKENS.keys())
+    else:
+        constant_symbols = []
 
-    # Common tokens across all chains
+    # Combine and deduplicate
+    all_symbols = list(set(cached_symbols + constant_symbols))
+
+    if all_symbols:
+        return all_symbols
+
+    # Fallback to common tokens if nothing found
     common_tokens = [
         "HBAR",
         "USDC",

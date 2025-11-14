@@ -40,6 +40,9 @@ dependencies = [
     "ag-ui-adk>=0.0.1",
     # Token discovery and search
     "coingecko>=0.13.0",
+    # Hedera SDK for token ID conversions (optional - has dependency conflicts)
+    # Install manually if needed: pip install hiero-sdk-python
+    # "hiero-sdk-python>=0.1.0",
 ]
 
 [project.optional-dependencies]

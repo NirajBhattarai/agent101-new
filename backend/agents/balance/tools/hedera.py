@@ -11,6 +11,7 @@ from packages.blockchain.hedera.balance import (
     resolve_hedera_account_id,
 )
 from packages.blockchain.hedera.constants import HEDERA_TOKENS
+from packages.blockchain.hedera.utils import resolve_token_identifier
 
 
 def _resolve_token_symbol_from_id(token_id: str) -> Optional[str]:
@@ -27,9 +28,15 @@ def _resolve_token_symbol_from_id(token_id: str) -> Optional[str]:
 
 
 def _resolve_token_address(token_address: str) -> str:
-    """Resolve token symbol to address if needed."""
-    if token_address.upper() in HEDERA_TOKENS:
-        return HEDERA_TOKENS[token_address.upper()]["tokenid"]
+    """
+    Resolve token identifier to Hedera TokenId format.
+    Handles: token symbols, TokenId format (0.0.123456), and Solidity addresses (0x...).
+    """
+    # Use the utility function to resolve token identifier
+    resolved_token_id = resolve_token_identifier(token_address)
+    if resolved_token_id:
+        return resolved_token_id
+    # Fallback to original if cannot be resolved
     return token_address
 
 
@@ -156,9 +163,7 @@ def _get_all_token_balances(api_base: str, account_identifier: str) -> list:
     return balances
 
 
-def get_balance_hedera(
-    account_address: str, token_address: Optional[str] = None
-) -> dict:
+def get_balance_hedera(account_address: str, token_address: Optional[str] = None) -> dict:
     """
     Get token balance for an account on Hedera chain.
 
@@ -192,11 +197,11 @@ def get_balance_hedera(
         account_identifier = get_account_identifier_for_api(account_address, account_id)
 
         balances = []
-        
+
         # Check if token_address is "HBAR" (native token)
         token_address_upper = token_address.upper() if token_address else None
         is_hbar_query = token_address_upper == "HBAR" or token_address_upper == "0.0.0"
-        
+
         if token_address:
             # Specific token query
             if is_hbar_query:

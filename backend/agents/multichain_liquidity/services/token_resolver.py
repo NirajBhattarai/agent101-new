@@ -2,6 +2,7 @@
 Token resolver service for converting token symbols to addresses.
 
 Handles symbol-to-address resolution for Ethereum, Polygon, and Hedera chains.
+Uses both constants and discovered tokens from cache.
 """
 
 from typing import Optional
@@ -9,6 +10,7 @@ from typing import Optional
 from packages.blockchain.ethereum.constants import ETHEREUM_TOKENS
 from packages.blockchain.hedera.constants import HEDERA_TOKENS
 from packages.blockchain.polygon.constants import POLYGON_TOKENS
+from packages.blockchain.token_updater import get_token_address_for_swap
 
 # Special mappings: Native tokens -> Wrapped tokens for DEX pools
 SYMBOL_ALIASES = {
@@ -23,6 +25,7 @@ SYMBOL_ALIASES = {
 def resolve_token_symbol(symbol: str, chain: str) -> Optional[str]:
     """
     Resolve a token symbol to its address for a specific chain.
+    Uses both constants and discovered tokens from cache.
 
     Args:
         symbol: Token symbol (e.g., "ETH", "USDT", "WETH")
@@ -38,7 +41,12 @@ def resolve_token_symbol(symbol: str, chain: str) -> Optional[str]:
     if symbol_upper in SYMBOL_ALIASES:
         symbol_upper = SYMBOL_ALIASES[symbol_upper]
 
-    # Resolve based on chain
+    # Try to get from cache or constants
+    address = get_token_address_for_swap(symbol_upper, chain.lower())
+    if address:
+        return address
+
+    # Fallback to original logic for backward compatibility
     chain_lower = chain.lower()
 
     if chain_lower == "ethereum":

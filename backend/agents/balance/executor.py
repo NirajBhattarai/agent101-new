@@ -62,7 +62,24 @@ class BalanceExecutor(AgentExecutor):
         session_id = _get_session_id(context)
         try:
             content = await self.agent.invoke(query, session_id)
+
+            # Ensure content is not empty
+            if not content or not content.strip():
+                print("⚠️ Warning: Agent returned empty content, using error response")
+                content = _build_execution_error_response(Exception("Empty response from agent"))
+
             validated_content = validate_response_content(content)
+
+            # Final check - ensure it's valid JSON
+            try:
+                json.loads(validated_content)
+            except json.JSONDecodeError as json_error:
+                print(f"⚠️ Warning: Response is not valid JSON: {json_error}")
+                print(f"   Content: {validated_content[:200]}")
+                validated_content = _build_execution_error_response(
+                    Exception(f"Invalid JSON response: {str(json_error)}")
+                )
+
             log_sending_response(validated_content)
             await event_queue.enqueue_event(new_agent_text_message(validated_content))
             print("✅ Successfully enqueued response")
@@ -72,6 +89,24 @@ class BalanceExecutor(AgentExecutor):
 
             traceback.print_exc()
             error_response = _build_execution_error_response(e)
+
+            # Ensure error response is valid JSON
+            try:
+                json.loads(error_response)
+            except json.JSONDecodeError:
+                # Fallback to simple error response
+                error_response = json.dumps(
+                    {
+                        "type": RESPONSE_TYPE,
+                        "chain": CHAIN_UNKNOWN,
+                        "account_address": "unknown",
+                        "balances": [],
+                        "total_usd_value": DEFAULT_TOTAL_USD_VALUE,
+                        "error": f"{ERROR_EXECUTION_ERROR}: {str(e)}",
+                    },
+                    indent=2,
+                )
+
             await event_queue.enqueue_event(new_agent_text_message(error_response))
 
     async def cancel(self, context: RequestContext, event_queue: EventQueue) -> None:

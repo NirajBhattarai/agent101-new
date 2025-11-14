@@ -53,7 +53,9 @@ class LiquidityAgent:
             )
 
         print(f"📊 Resolved tokens: token_a={token_a}, token_b={token_b}, chain={chain}, fee={fee}")
-        print(f"🔍 Chain type check: chain={chain!r}, type={type(chain)}, chain=='all'={chain == 'all'}, chain=='hedera'={chain == 'hedera'}, CHAIN_ALL={CHAIN_ALL}")
+        print(
+            f"🔍 Chain type check: chain={chain!r}, type={type(chain)}, chain=='all'={chain == 'all'}, chain=='hedera'={chain == 'hedera'}, CHAIN_ALL={CHAIN_ALL}"
+        )
 
         try:
             # Resolve addresses per-chain for direct tool calls
@@ -66,9 +68,11 @@ class LiquidityAgent:
             futures_to_create = []
 
             # Check if chain is "all" - use explicit comparison
-            is_all_chains = (chain == "all" or chain == CHAIN_ALL or str(chain).lower() == "all")
-            print(f"🔍 Chain comparison: is_all_chains={is_all_chains}, chain={chain!r}, CHAIN_ALL={CHAIN_ALL!r}")
-            
+            is_all_chains = chain == "all" or chain == CHAIN_ALL or str(chain).lower() == "all"
+            print(
+                f"🔍 Chain comparison: is_all_chains={is_all_chains}, chain={chain!r}, CHAIN_ALL={CHAIN_ALL!r}"
+            )
+
             if is_all_chains:
                 # Query all chains
                 eth_token_a, eth_token_b = resolve_token_pair(token_a, token_b, "ethereum")
@@ -125,7 +129,7 @@ class LiquidityAgent:
             else:
                 # Query only the specified chain
                 resolved_a, resolved_b = resolve_token_pair(token_a, token_b, chain)
-                
+
                 print(f"🔗 Querying {chain} only: token_a={resolved_a}, token_b={resolved_b}")
 
                 if resolved_a and resolved_b:

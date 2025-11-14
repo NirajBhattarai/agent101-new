@@ -3,12 +3,18 @@ Constants for Balance Agent.
 Contains configuration values, default values, and response templates.
 """
 
+import os
+
 # Default values
-DEFAULT_ACCOUNT_ADDRESS = "0.0.123456"
+DEFAULT_ACCOUNT_ADDRESS = None  # Will require explicit address
 DEFAULT_CHAIN = "hedera"
 DEFAULT_MODEL = "gemini-2.5-flash"
 DEFAULT_USER_ID = "balance_agent"
 DEFAULT_SESSION_ID = "default_session"
+
+# Configuration
+POPULAR_TOKENS_LIMIT = int(os.getenv("POPULAR_TOKENS_LIMIT", "10"))  # Configurable limit
+WEB_SEARCH_TIMEOUT = int(os.getenv("WEB_SEARCH_TIMEOUT", "10"))  # Timeout in seconds
 
 # Agent configuration
 AGENT_NAME = "balance_agent"
@@ -33,6 +39,8 @@ ERROR_EMPTY_RESPONSE = "Empty response from agent"
 ERROR_INVALID_JSON = "Invalid JSON response"
 ERROR_EXECUTION_ERROR = "Execution error"
 ERROR_CANCEL_NOT_SUPPORTED = "cancel not supported"
+ERROR_ACCOUNT_ADDRESS_REQUIRED = "Account address is required for balance queries"
+ERROR_INVALID_ACCOUNT_ADDRESS = "Invalid account address format"
 
 # Response templates
 DEFAULT_TOTAL_USD_VALUE = "$0.00"

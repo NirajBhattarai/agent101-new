@@ -10,6 +10,11 @@ from .token_discovery import (
     search_token_contract_address,
     search_token_on_web,
 )
+from .token_fetcher import (
+    fetch_popular_tokens,
+    get_token_address,
+    get_tokens_for_chain,
+)
 
 __all__ = [
     "get_balance_polygon",
@@ -20,4 +25,7 @@ __all__ = [
     "get_popular_tokens",
     "search_token_contract_address",
     "search_token_on_web",
+    "fetch_popular_tokens",
+    "get_tokens_for_chain",
+    "get_token_address",
 ]

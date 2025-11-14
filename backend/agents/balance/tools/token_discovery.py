@@ -188,9 +188,7 @@ def search_token_contract_address(token_symbol: str, chain: str) -> Optional[dic
             else:
                 coin_headers["x-cg-pro-api-key"] = api_key
 
-        coin_response = requests.get(
-            coin_url, params=coin_params, headers=coin_headers, timeout=10
-        )
+        coin_response = requests.get(coin_url, params=coin_params, headers=coin_headers, timeout=10)
         coin_response.raise_for_status()
         coin_data = coin_response.json()
 
@@ -210,4 +208,3 @@ def search_token_contract_address(token_symbol: str, chain: str) -> Optional[dic
     except Exception as e:
         print(f"❌ Error searching for {token_symbol} on {chain}: {e}")
         return None
-

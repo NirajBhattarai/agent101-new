@@ -249,15 +249,19 @@ def _get_pool_info(
         # For Hedera, convert native HBAR (0x0000...) to wHBAR for pool lookups
         if chain == "hedera":
             rpc_url = os.getenv("HEDERA_MAINNET_RPC", "https://mainnet.hashio.io/api")
-            
+
             # Convert HBAR to wHBAR for pool lookups
             HBAR_NATIVE_ADDRESS = "0x0000000000000000000000000000000000000000"
-            if token_in_address_evm == HBAR_NATIVE_ADDRESS or (token_in_symbol and token_in_symbol.upper() == "HBAR"):
+            if token_in_address_evm == HBAR_NATIVE_ADDRESS or (
+                token_in_symbol and token_in_symbol.upper() == "HBAR"
+            ):
                 whbar_info = HEDERA_TOKENS.get("WHBAR", {})
                 token_in_address_evm = whbar_info.get("address", token_in_address_evm)
                 print(f"🔄 Converted HBAR to wHBAR for pool lookup: {token_in_address_evm}")
-            
-            if token_out_address_evm == HBAR_NATIVE_ADDRESS or (token_out_symbol and token_out_symbol.upper() == "HBAR"):
+
+            if token_out_address_evm == HBAR_NATIVE_ADDRESS or (
+                token_out_symbol and token_out_symbol.upper() == "HBAR"
+            ):
                 whbar_info = HEDERA_TOKENS.get("WHBAR", {})
                 token_out_address_evm = whbar_info.get("address", token_out_address_evm)
                 print(f"🔄 Converted HBAR to wHBAR for pool lookup: {token_out_address_evm}")
@@ -371,14 +375,14 @@ def execute_swap(
         }
 
     # Step 3: Use swap config values (pool info should come from Liquidity Agent, not internal lookup)
-    print(f"🔄 Step 2: Preparing swap transaction...")
-    
+    print("🔄 Step 2: Preparing swap transaction...")
+
     # Use router address and default values from swap_config
     # Pool info should have been verified by Liquidity Agent before calling Swap Agent
     pool_address = swap_config.get("router_address", "")
     pool_liquidity = "0"  # Will be set by Liquidity Agent if needed
     pool_fee = 3000  # Default fee tier
-    
+
     # Step 4: Calculate amount_out using swap config
     print("🔄 Step 3: Calculating swap amounts...")
     amount_out = swap_config.get("amount_out", "0")

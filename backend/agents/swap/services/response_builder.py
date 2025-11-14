@@ -83,11 +83,33 @@ def _extract_token_addresses(chain: str, swap_config: dict) -> dict:
 def _fetch_balance(chain: str, account: str, token_address: str, token_symbol: str) -> float:
     """Fetch balance for account and token (individual asset check)."""
     try:
+        # For native tokens (MATIC, ETH, HBAR), don't use token_address - get native balance
+        token_symbol_upper = token_symbol.upper()
+        is_native_token = token_symbol_upper in ["HBAR", "MATIC", "ETH"]
+        
         if chain == "hedera":
+            if is_native_token and token_symbol_upper == "HBAR":
+                # Get native HBAR balance directly
+                from packages.blockchain.hedera.balance import get_native_hbar_balance
+                result = get_native_hbar_balance(account, api_base=None)
+                if result.get("balance"):
+                    return float(result.get("balance", "0"))
             result = get_balance_hedera(account, token_address=token_address)
         elif chain == "polygon":
+            if is_native_token and token_symbol_upper == "MATIC":
+                # Get native MATIC balance directly
+                from packages.blockchain.polygon.balance import get_native_matic_balance
+                result = get_native_matic_balance(account)
+                if result.get("balance"):
+                    return float(result.get("balance", "0"))
             result = get_balance_polygon(account, token_address=token_address)
         elif chain == "ethereum":
+            if is_native_token and token_symbol_upper == "ETH":
+                # Get native ETH balance directly
+                from packages.blockchain.ethereum.balance import get_native_eth_balance
+                result = get_native_eth_balance(account)
+                if result.get("balance"):
+                    return float(result.get("balance", "0"))
             result = get_balance_ethereum(account, token_address=token_address)
         else:
             return 0.0
@@ -355,8 +377,12 @@ def execute_swap(
     actual_balance = 0.0
     balance_sufficient = False
     if account_address:
+        # For native tokens (MATIC, ETH, HBAR), pass None for token_address to get native balance
+        token_address_for_balance = None
+        if token_in_symbol.upper() not in ["HBAR", "MATIC", "ETH"]:
+            token_address_for_balance = addresses["token_in_address"]
         actual_balance = _fetch_balance(
-            chain, account_address, addresses["token_in_address"], token_in_symbol
+            chain, account_address, token_address_for_balance, token_in_symbol
         )
         balance_sufficient = actual_balance >= amount_float
         print(

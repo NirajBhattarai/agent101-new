@@ -32,7 +32,11 @@ def get_amounts_out(
     rpc_url: str,
 ) -> Optional[list[int]]:
     """
-    Call router.getAmountsOut to get expected output amounts.
+    Get expected output amounts for Polygon swaps.
+    
+    Note: Uniswap V3 router doesn't have getAmountsOut (that's V2).
+    For V3, we would need to use the Quoter contract, but for now we'll skip
+    the router call and use estimation.
 
     Args:
         amount_in: Input amount as string (human-readable)
@@ -42,44 +46,12 @@ def get_amounts_out(
         rpc_url: RPC URL for web3 connection
 
     Returns:
-        List of amounts (in wei/smallest unit) or None if call fails
+        None (Uniswap V3 doesn't support getAmountsOut on router)
     """
-    try:
-        # Get token decimals for amount conversion
-        token_in_upper = token_in_symbol.upper()
-        # Map MATIC to WMATIC for decimals lookup
-        if token_in_upper == "MATIC":
-            token_in_upper = "WMATIC"
-        
-        if token_in_upper not in POLYGON_TOKENS:
-            return None
-
-        decimals = POLYGON_TOKENS[token_in_upper].get("decimals", 18)
-        amount_float = float(amount_in)
-        amount_in_wei = int(amount_float * (10**decimals))
-
-        # Initialize web3
-        w3 = Web3(HTTPProvider(rpc_url))
-        if not w3.is_connected():
-            print(f"⚠️ Failed to connect to RPC: {rpc_url}")
-            return None
-
-        # Create router contract
-        router_contract = w3.eth.contract(
-            address=Web3.to_checksum_address(router_address), abi=UNISWAP_V3_ROUTER_ABI
-        )
-
-        # Normalize path addresses
-        normalized_path = [Web3.to_checksum_address(addr) for addr in swap_path]
-
-        # Call getAmountsOut
-        amounts = router_contract.functions.getAmountsOut(amount_in_wei, normalized_path).call()
-
-        print(f"✅ getAmountsOut result: {amounts} for path {swap_path}")
-        return amounts
-    except Exception as e:
-        print(f"⚠️ Error calling getAmountsOut: {e}")
-        return None
+    # Uniswap V3 router doesn't have getAmountsOut - it uses a separate Quoter contract
+    # For now, return None to use estimation
+    print("ℹ️  Uniswap V3 doesn't support getAmountsOut on router (uses Quoter contract)")
+    return None
 
 
 def get_token_address_polygon(token_symbol: str) -> Optional[str]:

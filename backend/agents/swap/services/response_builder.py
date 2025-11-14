@@ -225,6 +225,8 @@ def _get_pool_info(
     token_in_address_evm: str,
     token_out_address_evm: str,
     rpc_url: str,
+    token_in_symbol: Optional[str] = None,
+    token_out_symbol: Optional[str] = None,
 ) -> Optional[Dict[str, Any]]:
     """
     Get pool address and liquidity information.
@@ -234,16 +236,31 @@ def _get_pool_info(
         token_in_address_evm: Token in EVM address
         token_out_address_evm: Token out EVM address
         rpc_url: RPC URL for the chain (may need to override for Hedera)
+        token_in_symbol: Optional token in symbol (for native token conversion)
+        token_out_symbol: Optional token out symbol (for native token conversion)
 
     Returns:
         Pool info dict with pool_address, liquidity, fee, etc. or None if not found
     """
     try:
         from packages.blockchain.dex.base import FEE_TIERS
+        from packages.blockchain.hedera.constants import HEDERA_TOKENS
 
-        # For Hedera, use hashio RPC for Web3 calls (not Mirror Node API)
+        # For Hedera, convert native HBAR (0x0000...) to wHBAR for pool lookups
         if chain == "hedera":
             rpc_url = os.getenv("HEDERA_MAINNET_RPC", "https://mainnet.hashio.io/api")
+            
+            # Convert HBAR to wHBAR for pool lookups
+            HBAR_NATIVE_ADDRESS = "0x0000000000000000000000000000000000000000"
+            if token_in_address_evm == HBAR_NATIVE_ADDRESS or (token_in_symbol and token_in_symbol.upper() == "HBAR"):
+                whbar_info = HEDERA_TOKENS.get("WHBAR", {})
+                token_in_address_evm = whbar_info.get("address", token_in_address_evm)
+                print(f"🔄 Converted HBAR to wHBAR for pool lookup: {token_in_address_evm}")
+            
+            if token_out_address_evm == HBAR_NATIVE_ADDRESS or (token_out_symbol and token_out_symbol.upper() == "HBAR"):
+                whbar_info = HEDERA_TOKENS.get("WHBAR", {})
+                token_out_address_evm = whbar_info.get("address", token_out_address_evm)
+                print(f"🔄 Converted HBAR to wHBAR for pool lookup: {token_out_address_evm}")
 
         # Try each fee tier until we find a pool
         for fee in FEE_TIERS:
@@ -308,8 +325,8 @@ def execute_swap(
     """
     Execute swap following agentflow101 pattern:
     1. Check balance (individual asset)
-    2. Get pool address and liquidity
-    3. Execute swap
+    2. Prepare swap transaction (pool info should be verified by Liquidity Agent beforehand)
+    3. Return swap transaction details
     """
     print(f"💱 Starting swap execution for {token_in_symbol} -> {token_out_symbol} on {chain}")
 
@@ -353,56 +370,19 @@ def execute_swap(
             "required_amount": f"{amount_float:.2f}",
         }
 
-    # Step 3: Get pool address and liquidity
-    print(f"🏊 Step 2: Getting pool and liquidity for {token_in_symbol}/{token_out_symbol}...")
-    token_in_evm = addresses.get("token_in_address_evm") or addresses.get("token_in_address")
-    token_out_evm = addresses.get("token_out_address_evm") or addresses.get("token_out_address")
-    rpc_url = swap_config.get("rpc_url", "")
-
-    pool_info = _get_pool_info(chain, token_in_evm, token_out_evm, rpc_url)
-
-    # Store token addresses for price calculation
-    if pool_info:
-        pool_info["token_in_address_evm"] = token_in_evm
-        pool_info["token_out_address_evm"] = token_out_evm
-
-    if not pool_info:
-        print("⚠️ No pool found - using router address as fallback")
-        pool_address = swap_config.get("router_address", "")
-        pool_liquidity = "0"
-        pool_fee = 3000
-    else:
-        pool_address = pool_info.get("pool_address", swap_config.get("router_address", ""))
-        pool_liquidity = pool_info.get("liquidity", "0")
-        pool_fee = pool_info.get("fee", 3000)
-        print(f"   Pool Address: {pool_address}")
-        print(f"   Liquidity: {pool_liquidity}")
-        print(f"   Fee Tier: {pool_fee} bps")
-
-    # Step 4: Calculate amount_out using pool price if available
+    # Step 3: Use swap config values (pool info should come from Liquidity Agent, not internal lookup)
+    print(f"🔄 Step 2: Preparing swap transaction...")
+    
+    # Use router address and default values from swap_config
+    # Pool info should have been verified by Liquidity Agent before calling Swap Agent
+    pool_address = swap_config.get("router_address", "")
+    pool_liquidity = "0"  # Will be set by Liquidity Agent if needed
+    pool_fee = 3000  # Default fee tier
+    
+    # Step 4: Calculate amount_out using swap config
     print("🔄 Step 3: Calculating swap amounts...")
     amount_out = swap_config.get("amount_out", "0")
     amount_out_min = swap_config.get("amount_out_min", "0")
-
-    # If we have pool info, calculate a better estimate using the pool price
-    if pool_info and pool_info.get("sqrt_price_x96"):
-        try:
-            amount_out_float = _calculate_amount_out_from_pool(
-                amount_float,
-                pool_info,
-                token_in_symbol,
-                token_out_symbol,
-                chain,
-            )
-            amount_out = f"{amount_out_float:.6f}"
-            amount_out_min_float = amount_out_float * (1 - slippage_tolerance / 100)
-            amount_out_min = f"{amount_out_min_float:.6f}"
-            print(
-                f"   Calculated from pool: {amount_in} {token_in_symbol} → {amount_out} {token_out_symbol}"
-            )
-        except Exception as e:
-            print(f"⚠️ Error calculating from pool price: {e}, using default estimate")
-            # Fall back to swap_config values
 
     swap_fee_percent = swap_config.get("swap_fee_percent", 0.3)
     tx_hash = f"0x{''.join([random.choice('0123456789abcdef') for _ in range(64)])}"
@@ -447,7 +427,6 @@ def execute_swap(
         "amount_in": amount_in,
         "account_address": account_address,
         "balance_check": balance_check,
-        "pool_info": pool_info,  # Add pool info to response
         "transaction": transaction,
         "swap_config": swap_config,
     }

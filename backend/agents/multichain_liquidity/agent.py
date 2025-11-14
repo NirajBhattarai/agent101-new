@@ -5,6 +5,7 @@ Defines the LiquidityAgent class that handles liquidity queries using direct too
 """
 
 from .core.constants import (  # noqa: E402
+    CHAIN_ALL,
     ERROR_VALIDATION_FAILED,
 )
 from .core.response_validator import (  # noqa: E402
@@ -39,6 +40,8 @@ class LiquidityAgent:
         chain = parse_chain(query)
         fee = extract_fee_tier(query) or 3000
 
+        print(f"🔍 Parsed query: token_a={token_a}, token_b={token_b}, chain={chain}, fee={fee}")
+
         if not token_a or not token_b:
             error_msg = (
                 "Could not extract token addresses from query. "
@@ -50,78 +53,103 @@ class LiquidityAgent:
             )
 
         print(f"📊 Resolved tokens: token_a={token_a}, token_b={token_b}, chain={chain}, fee={fee}")
+        print(f"🔍 Chain type check: chain={chain!r}, type={type(chain)}, chain=='all'={chain == 'all'}, chain=='hedera'={chain == 'hedera'}, CHAIN_ALL={CHAIN_ALL}")
 
         try:
             # Resolve addresses per-chain for direct tool calls
             # Using direct tool calls for reliability (parallel agent API has issues)
-            if chain == "all":
-                eth_token_a, eth_token_b = resolve_token_pair(token_a, token_b, "ethereum")
-                poly_token_a, poly_token_b = resolve_token_pair(token_a, token_b, "polygon")
-                hedera_token_a, hedera_token_b = resolve_token_pair(token_a, token_b, "hedera")
-            else:
-                # For single chain, resolve once and use for all (though only one will be queried)
-                resolved_a, resolved_b = resolve_token_pair(token_a, token_b, chain)
-                eth_token_a, eth_token_b = resolved_a, resolved_b
-                poly_token_a, poly_token_b = resolved_a, resolved_b
-                hedera_token_a, hedera_token_b = resolved_a, resolved_b
-
-            print(
-                f"🔗 Using per-chain addresses: ETH={eth_token_a}/{eth_token_b}, "
-                f"POLY={poly_token_a}/{poly_token_b}, HEDERA={hedera_token_a}/{hedera_token_b}"
-            )
-
-            # Call tools directly in parallel for reliability
-            # Skip chains where tokens couldn't be resolved (None values)
             import asyncio
             from concurrent.futures import ThreadPoolExecutor
 
             loop = asyncio.get_event_loop()
             chain_results = {}
-
-            # Only query chains where both tokens are resolved
             futures_to_create = []
 
-            if eth_token_a and eth_token_b:
-                futures_to_create.append(
-                    ("ethereum", get_ethereum_liquidity, eth_token_a, eth_token_b, fee)
-                )
-            else:
-                chain_results["ethereum"] = {
-                    "chain": "ethereum",
-                    "token_a": token_a,
-                    "token_b": token_b,
-                    "fee": fee,
-                    "status": "error",
-                    "error": f"Token pair not available on Ethereum: {token_a}/{token_b}",
-                }
+            # Check if chain is "all" - use explicit comparison
+            is_all_chains = (chain == "all" or chain == CHAIN_ALL or str(chain).lower() == "all")
+            print(f"🔍 Chain comparison: is_all_chains={is_all_chains}, chain={chain!r}, CHAIN_ALL={CHAIN_ALL!r}")
+            
+            if is_all_chains:
+                # Query all chains
+                eth_token_a, eth_token_b = resolve_token_pair(token_a, token_b, "ethereum")
+                poly_token_a, poly_token_b = resolve_token_pair(token_a, token_b, "polygon")
+                hedera_token_a, hedera_token_b = resolve_token_pair(token_a, token_b, "hedera")
 
-            if poly_token_a and poly_token_b:
-                futures_to_create.append(
-                    ("polygon", get_polygon_liquidity, poly_token_a, poly_token_b, fee)
+                print(
+                    f"🔗 Using per-chain addresses: ETH={eth_token_a}/{eth_token_b}, "
+                    f"POLY={poly_token_a}/{poly_token_b}, HEDERA={hedera_token_a}/{hedera_token_b}"
                 )
-            else:
-                chain_results["polygon"] = {
-                    "chain": "polygon",
-                    "token_a": token_a,
-                    "token_b": token_b,
-                    "fee": fee,
-                    "status": "error",
-                    "error": f"Token pair not available on Polygon: {token_a}/{token_b}",
-                }
 
-            if hedera_token_a and hedera_token_b:
-                futures_to_create.append(
-                    ("hedera", get_hedera_liquidity, hedera_token_a, hedera_token_b, fee)
-                )
+                # Only query chains where both tokens are resolved
+                if eth_token_a and eth_token_b:
+                    futures_to_create.append(
+                        ("ethereum", get_ethereum_liquidity, eth_token_a, eth_token_b, fee)
+                    )
+                else:
+                    chain_results["ethereum"] = {
+                        "chain": "ethereum",
+                        "token_a": token_a,
+                        "token_b": token_b,
+                        "fee": fee,
+                        "status": "error",
+                        "error": f"Token pair not available on Ethereum: {token_a}/{token_b}",
+                    }
+
+                if poly_token_a and poly_token_b:
+                    futures_to_create.append(
+                        ("polygon", get_polygon_liquidity, poly_token_a, poly_token_b, fee)
+                    )
+                else:
+                    chain_results["polygon"] = {
+                        "chain": "polygon",
+                        "token_a": token_a,
+                        "token_b": token_b,
+                        "fee": fee,
+                        "status": "error",
+                        "error": f"Token pair not available on Polygon: {token_a}/{token_b}",
+                    }
+
+                if hedera_token_a and hedera_token_b:
+                    futures_to_create.append(
+                        ("hedera", get_hedera_liquidity, hedera_token_a, hedera_token_b, fee)
+                    )
+                else:
+                    chain_results["hedera"] = {
+                        "chain": "hedera",
+                        "token_a": token_a,
+                        "token_b": token_b,
+                        "fee": fee,
+                        "status": "error",
+                        "error": f"Token pair not available on Hedera: {token_a}/{token_b}",
+                    }
             else:
-                chain_results["hedera"] = {
-                    "chain": "hedera",
-                    "token_a": token_a,
-                    "token_b": token_b,
-                    "fee": fee,
-                    "status": "error",
-                    "error": f"Token pair not available on Hedera: {token_a}/{token_b}",
-                }
+                # Query only the specified chain
+                resolved_a, resolved_b = resolve_token_pair(token_a, token_b, chain)
+                
+                print(f"🔗 Querying {chain} only: token_a={resolved_a}, token_b={resolved_b}")
+
+                if resolved_a and resolved_b:
+                    if chain == "ethereum":
+                        futures_to_create.append(
+                            ("ethereum", get_ethereum_liquidity, resolved_a, resolved_b, fee)
+                        )
+                    elif chain == "polygon":
+                        futures_to_create.append(
+                            ("polygon", get_polygon_liquidity, resolved_a, resolved_b, fee)
+                        )
+                    elif chain == "hedera":
+                        futures_to_create.append(
+                            ("hedera", get_hedera_liquidity, resolved_a, resolved_b, fee)
+                        )
+                else:
+                    chain_results[chain] = {
+                        "chain": chain,
+                        "token_a": token_a,
+                        "token_b": token_b,
+                        "fee": fee,
+                        "status": "error",
+                        "error": f"Token pair not available on {chain}: {token_a}/{token_b}",
+                    }
 
             # Execute only valid futures
             if futures_to_create:

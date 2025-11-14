@@ -176,7 +176,7 @@ ORCHESTRATOR_INSTRUCTION = """
        - If balance is insufficient, inform user and STOP - do not proceed to swap
        - If balance is sufficient, proceed to Step 2
 
-    2. **STEP 2: Get Pool/Liquidity** - Call Multi-Chain Liquidity Agent
+    2. **STEP 2: Check Pool/Liquidity** - Call Multi-Chain Liquidity Agent
        - Extract token pair from user query (token_in and token_out)
        - Extract chain from user query
        - Call Multi-Chain Liquidity Agent: "Get liquidity for [token_in]/[token_out] on [chain]"

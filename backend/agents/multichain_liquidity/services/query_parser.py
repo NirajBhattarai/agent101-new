@@ -19,15 +19,20 @@ from .token_resolver import resolve_token_pair
 def detect_chain_from_query(query: str) -> Optional[str]:
     """Detect chain from query text."""
     query_lower = query.lower()
-    # Check for "all" first to avoid false matches with token symbols
-    if "all" in query_lower or "all chains" in query_lower:
-        return CHAIN_ALL
-    if "ethereum" in query_lower:
-        return CHAIN_ETHEREUM
-    if "polygon" in query_lower:
-        return CHAIN_POLYGON
-    if "hedera" in query_lower:
+    
+    # Priority order: Check specific chains first, then "all"
+    # Check for "on hedera" or "hedera" - highest priority
+    if " on hedera" in query_lower or "hedera" in query_lower:
         return CHAIN_HEDERA
+    # Check for "on ethereum" or "ethereum"
+    if " on ethereum" in query_lower or "ethereum" in query_lower:
+        return CHAIN_ETHEREUM
+    # Check for "on polygon" or "polygon"
+    if " on polygon" in query_lower or "polygon" in query_lower:
+        return CHAIN_POLYGON
+    # Check for "all" - only if it's explicitly "all" or "all chains", not part of another word
+    if " all " in query_lower or "all chains" in query_lower or query_lower.strip() == "all":
+        return CHAIN_ALL
     # Only match "eth" if it's clearly referring to the chain, not a token
     # Check for patterns like "on eth" or "ethereum" but not just "eth" as a token
     if " on eth" in query_lower or " eth " in query_lower or " eth," in query_lower:

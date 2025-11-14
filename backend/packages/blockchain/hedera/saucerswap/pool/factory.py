@@ -4,8 +4,6 @@ from typing import Optional
 
 from packages.blockchain.hedera.saucerswap.constants import (
     NETWORKS,
-    SAUCERSWAP_FACTORY_V3_MAINNET,
-    SAUCERSWAP_FACTORY_V3_TESTNET,
 )
 
 
@@ -120,4 +118,3 @@ def validate_pair_address(
     # 1. Querying the pair contract for token0, token1, and fee
     # 2. Comparing with provided values
     return False
-

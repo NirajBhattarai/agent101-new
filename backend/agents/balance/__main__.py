@@ -4,12 +4,14 @@ Balance Agent Server (ADK + A2A Protocol)
 Starts the Balance Agent as an A2A Protocol server.
 """
 
-import uvicorn
 import os
+
+import uvicorn
 from a2a.server.apps import A2AStarletteApplication
 from a2a.server.request_handlers import DefaultRequestHandler
 from a2a.server.tasks import InMemoryTaskStore
 from a2a.types import AgentCapabilities, AgentCard, AgentSkill
+
 from .executor import BalanceExecutor
 
 port = int(os.getenv("BALANCE_PORT", 9997))
@@ -61,4 +63,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

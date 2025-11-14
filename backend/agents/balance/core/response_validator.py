@@ -5,12 +5,13 @@ Handles validation and serialization of balance responses.
 """
 
 import json
+
 from .constants import (
-    RESPONSE_TYPE,
     DEFAULT_TOTAL_USD_VALUE,
+    RESPONSE_TYPE,
 )
-from .models.balance import StructuredBalance
 from .exceptions import ValidationError
+from .models.balance import StructuredBalance
 
 
 def validate_and_serialize_response(balance_data: dict) -> str:
@@ -48,4 +49,3 @@ def log_response_info(account_address: str, chain: str, response: str) -> None:
 def validate_json(response: str) -> None:
     """Validate that response is valid JSON."""
     json.loads(response)
-

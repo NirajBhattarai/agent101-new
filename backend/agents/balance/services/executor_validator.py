@@ -11,4 +11,3 @@ def validate_response_content(content: str) -> str:
 def log_sending_response(content: str) -> None:
     """Log sending response."""
     print(f"📤 Sending balance response (length: {len(content)} chars)")
-

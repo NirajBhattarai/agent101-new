@@ -1,10 +1,9 @@
 """Tests for Hedera token constants."""
 
-import pytest
 from packages.blockchain.hedera.constants import (
-    HEDERA_TOKENS,
-    HEDERA_TOKEN_IDS,
     HEDERA_TOKEN_EVM_ADDRESSES,
+    HEDERA_TOKEN_IDS,
+    HEDERA_TOKENS,
 )
 
 
@@ -65,4 +64,3 @@ def test_token_addresses_format():
         assert "." in token["tokenid"]
         parts = token["tokenid"].split(".")
         assert len(parts) == 3
-

@@ -102,7 +102,4 @@ HEDERA_TOKENS = {
 HEDERA_TOKEN_IDS = {symbol: token["tokenid"] for symbol, token in HEDERA_TOKENS.items()}
 
 # Hedera token EVM address mapping - for contract calls
-HEDERA_TOKEN_EVM_ADDRESSES = {
-    symbol: token["address"] for symbol, token in HEDERA_TOKENS.items()
-}
-
+HEDERA_TOKEN_EVM_ADDRESSES = {symbol: token["address"] for symbol, token in HEDERA_TOKENS.items()}

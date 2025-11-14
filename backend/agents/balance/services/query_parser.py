@@ -6,13 +6,14 @@ Handles extraction of account addresses and chain detection from queries.
 
 import re
 from typing import Optional
+
 from ..core.constants import (
-    DEFAULT_ACCOUNT_ADDRESS,
-    DEFAULT_CHAIN,
+    CHAIN_ALL,
+    CHAIN_ETHEREUM,
     CHAIN_HEDERA,
     CHAIN_POLYGON,
-    CHAIN_ETHEREUM,
-    CHAIN_ALL,
+    DEFAULT_ACCOUNT_ADDRESS,
+    DEFAULT_CHAIN,
 )
 
 
@@ -68,4 +69,3 @@ def parse_chain(query: str, account_address: str) -> str:
     if chain:
         return chain
     return detect_chain_from_address(account_address)
-

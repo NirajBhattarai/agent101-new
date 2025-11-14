@@ -12,7 +12,7 @@ POLYGON_MAINNET_RPC = os.getenv("POLYGON_MAINNET_RPC", "https://polygon.llamarpc
 HEDERA_TESTNET_RPC = os.getenv("HEDERA_TESTNET_RPC", "https://testnet.hashio.io/api")
 
 # Fee tiers (basis points)
-FEE_TIER_500 = 500   # 0.05%
+FEE_TIER_500 = 500  # 0.05%
 FEE_TIER_3000 = 3000  # 0.3%
 FEE_TIER_10000 = 10000  # 1%
 
@@ -30,4 +30,3 @@ CHAIN_HEDERA = "hedera"
 # Network names
 NETWORK_MAINNET = "mainnet"
 NETWORK_TESTNET = "testnet"
-

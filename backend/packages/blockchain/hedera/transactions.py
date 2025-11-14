@@ -40,4 +40,3 @@ class TransactionService:
         """
         # TODO: Implement transaction status check
         return {"status": "unknown", "transaction_id": transaction_id}
-

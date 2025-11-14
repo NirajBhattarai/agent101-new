@@ -3,7 +3,7 @@
 __version__ = "0.1.0"
 
 from packages.blockchain.dex.abis import UNISWAP_V3_FACTORY_ABI, UNISWAP_V3_POOL_ABI
-from packages.blockchain.dex.base import BaseUniswapV3Client, FEE_TIERS, PoolInfo, Slot0Data
+from packages.blockchain.dex.base import FEE_TIERS, BaseUniswapV3Client, PoolInfo, Slot0Data
 from packages.blockchain.dex.utils import (
     DEXError,
     InvalidAddressError,
@@ -27,4 +27,3 @@ __all__ = [
     "InvalidFeeTierError",
     "PoolNotFoundError",
 ]
-

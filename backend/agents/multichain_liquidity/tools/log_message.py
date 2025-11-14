@@ -13,4 +13,3 @@ def log_message(message: str) -> str:
     """
     print(f"📝 Log: {message}")
     return f"Logged: {message}"
-

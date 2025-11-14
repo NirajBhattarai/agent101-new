@@ -81,7 +81,12 @@ UNISWAP_V3_POOL_ABI = [
     {
         "anonymous": False,
         "inputs": [
-            {"indexed": False, "internalType": "uint160", "name": "sqrtPriceX96", "type": "uint160"},
+            {
+                "indexed": False,
+                "internalType": "uint160",
+                "name": "sqrtPriceX96",
+                "type": "uint160",
+            },
             {"indexed": False, "internalType": "int24", "name": "tick", "type": "int24"},
         ],
         "name": "Initialize",
@@ -119,7 +124,12 @@ UNISWAP_V3_POOL_ABI = [
             {"indexed": True, "internalType": "address", "name": "recipient", "type": "address"},
             {"indexed": False, "internalType": "int256", "name": "amount0", "type": "int256"},
             {"indexed": False, "internalType": "int256", "name": "amount1", "type": "int256"},
-            {"indexed": False, "internalType": "uint160", "name": "sqrtPriceX96", "type": "uint160"},
+            {
+                "indexed": False,
+                "internalType": "uint160",
+                "name": "sqrtPriceX96",
+                "type": "uint160",
+            },
             {"indexed": False, "internalType": "uint128", "name": "liquidity", "type": "uint128"},
             {"indexed": False, "internalType": "int24", "name": "tick", "type": "int24"},
         ],
@@ -211,7 +221,9 @@ UNISWAP_V3_POOL_ABI = [
         "type": "function",
     },
     {
-        "inputs": [{"internalType": "uint16", "name": "observationCardinalityNext", "type": "uint16"}],
+        "inputs": [
+            {"internalType": "uint16", "name": "observationCardinalityNext", "type": "uint16"}
+        ],
         "name": "increaseObservationCardinalityNext",
         "outputs": [],
         "stateMutability": "nonpayable",
@@ -260,7 +272,11 @@ UNISWAP_V3_POOL_ABI = [
         "outputs": [
             {"internalType": "uint32", "name": "blockTimestamp", "type": "uint32"},
             {"internalType": "int56", "name": "tickCumulative", "type": "int56"},
-            {"internalType": "uint160", "name": "secondsPerLiquidityCumulativeX128", "type": "uint160"},
+            {
+                "internalType": "uint160",
+                "name": "secondsPerLiquidityCumulativeX128",
+                "type": "uint160",
+            },
             {"internalType": "bool", "name": "initialized", "type": "bool"},
         ],
         "stateMutability": "view",
@@ -381,7 +397,11 @@ UNISWAP_V3_POOL_ABI = [
             {"internalType": "uint256", "name": "feeGrowthOutside0X128", "type": "uint256"},
             {"internalType": "uint256", "name": "feeGrowthOutside1X128", "type": "uint256"},
             {"internalType": "int56", "name": "tickCumulativeOutside", "type": "int56"},
-            {"internalType": "uint160", "name": "secondsPerLiquidityOutsideX128", "type": "uint160"},
+            {
+                "internalType": "uint160",
+                "name": "secondsPerLiquidityOutsideX128",
+                "type": "uint160",
+            },
             {"internalType": "uint32", "name": "secondsOutside", "type": "uint32"},
             {"internalType": "bool", "name": "initialized", "type": "bool"},
         ],
@@ -403,4 +423,3 @@ UNISWAP_V3_POOL_ABI = [
         "type": "function",
     },
 ]
-

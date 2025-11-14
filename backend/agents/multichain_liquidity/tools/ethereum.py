@@ -1,6 +1,7 @@
 """Ethereum liquidity tool."""
 
 import os
+
 from packages.blockchain.ethereum.uniswap.pool.web3_client import (
     UniswapWeb3Client as EthereumUniswapClient,
 )
@@ -21,9 +22,7 @@ def get_ethereum_liquidity(token_a: str, token_b: str, fee: int = 3000) -> dict:
         Dictionary with pool address, liquidity, and slot0 data
     """
     try:
-        client = EthereumUniswapClient(
-            rpc_url=ETHEREUM_MAINNET_RPC, network="mainnet"
-        )
+        client = EthereumUniswapClient(rpc_url=ETHEREUM_MAINNET_RPC, network="mainnet")
         pool_info = client.get_pool_info(token_a, token_b, fee=fee)
 
         if pool_info:
@@ -60,4 +59,3 @@ def get_ethereum_liquidity(token_a: str, token_b: str, fee: int = 3000) -> dict:
             "status": "error",
             "error": str(e),
         }
-

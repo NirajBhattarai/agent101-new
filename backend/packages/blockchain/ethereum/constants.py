@@ -43,4 +43,3 @@ ETHEREUM_TOKENS = {
         "decimals": 8,
     },
 }
-

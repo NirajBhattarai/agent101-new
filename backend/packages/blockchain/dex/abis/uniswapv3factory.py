@@ -173,4 +173,3 @@ UNISWAP_V3_FACTORY_ABI = [
         "outputs": [],
     },
 ]
-

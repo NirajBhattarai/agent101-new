@@ -24,4 +24,3 @@ class PoolInfo(TypedDict):
     fee: int
     liquidity: int
     slot0: Slot0Data
-

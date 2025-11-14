@@ -5,7 +5,9 @@ Pydantic models for balance-related data structures.
 """
 
 from typing import Optional
+
 from pydantic import BaseModel, Field
+
 from ..constants import RESPONSE_TYPE
 
 
@@ -31,4 +33,3 @@ class StructuredBalance(BaseModel):
     balances: list[TokenBalance] = Field(description="List of token balances")
     total_usd_value: str = Field(description="Total USD value estimate")
     error: Optional[str] = Field(default=None, description="Error message if any")
-

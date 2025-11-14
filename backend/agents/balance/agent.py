@@ -4,24 +4,17 @@ Balance Agent Definition
 Defines the BalanceAgent class that handles balance queries using direct tool calls.
 """
 
-from .tools import (
-    get_balance_ethereum,
-    get_balance_polygon,
-    get_balance_hedera,
-    get_balance_all_chains,
-)
 from .core.constants import (
-    DEFAULT_USER_ID,
     ERROR_VALIDATION_FAILED,
+)
+from .core.response_validator import (
+    build_error_response,
+    log_response_info,
+    validate_and_serialize_response,
+    validate_json,
 )
 from .services.query_parser import extract_account_address, parse_chain
 from .services.response_builder import build_balance_response
-from .core.response_validator import (
-    validate_and_serialize_response,
-    log_response_info,
-    validate_json,
-    build_error_response,
-)
 
 
 class BalanceAgent:
@@ -41,7 +34,7 @@ class BalanceAgent:
         except Exception as e:
             print(f"❌ Validation error: {e}")
             import traceback
+
             traceback.print_exc()
             error_msg = f"{ERROR_VALIDATION_FAILED}: {str(e)}"
             return build_error_response(chain, account_address, error_msg)
-

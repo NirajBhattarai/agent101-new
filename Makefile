@@ -73,19 +73,20 @@ backend-dev:
 
 # Format backend code
 backend-format:
-	cd backend && black packages/ agents/ tests/
+	@echo "Formatting backend (ruff check --fix + ruff format)..."
+	cd backend && uv sync --extra dev && (uv run ruff check --fix packages/ agents/ tests/ || true) && uv run ruff format packages/ agents/ tests/
 
 # Check backend code formatting (without modifying)
 backend-format-check:
-	cd backend && black --check packages/ agents/ tests/
+	cd backend && uv run ruff format --check packages/ agents/ tests/
 
 # Lint backend code
 backend-lint:
-	cd backend && ruff check packages/ agents/ tests/
+	cd backend && uv run ruff check packages/ agents/ tests/
 
 # Fix linting issues automatically
 backend-lint-fix:
-	cd backend && ruff check --fix packages/ agents/ tests/
+	cd backend && uv run ruff check --fix packages/ agents/ tests/
 
 # Run backend tests
 backend-test:
@@ -97,7 +98,7 @@ backend-test-coverage:
 
 # Type check backend code
 backend-type-check:
-	cd backend && mypy packages/ agents/
+	cd backend && uv run mypy packages/ agents/
 
 # Run all backend checks (format, lint, type-check, test)
 backend-check: backend-format-check backend-lint backend-type-check backend-test

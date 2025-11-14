@@ -61,6 +61,8 @@ include = '\.pyi?$'
 [tool.ruff]
 line-length = 100
 target-version = "py311"
+
+[tool.ruff.lint]
 select = [
     "E",  # pycodestyle errors
     "W",  # pycodestyle warnings
@@ -71,10 +73,15 @@ select = [
 ]
 ignore = [
     "E501",  # line too long, handled by black
+    "E402",  # module level import not at top of file (intentional in some cases)
+    "E722",  # do not use bare except (intentional in some error handling)
 ]
 
-[tool.ruff.per-file-ignores]
+[tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"]
+"agents/multichain_liquidity/__main__.py" = ["E402"]
+"agents/balance/__main__.py" = ["E402"]
+"packages/blockchain/hedera/balance/balance_client.py" = ["E722"]
 
 [tool.mypy]
 python_version = "3.11"

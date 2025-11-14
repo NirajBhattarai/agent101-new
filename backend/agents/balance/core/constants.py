@@ -80,4 +80,3 @@ After fetching the data, return a structured JSON response with this format:
 
 Always use the tools to fetch real data. Return ONLY valid JSON, no markdown code blocks, no other text.
 """
-

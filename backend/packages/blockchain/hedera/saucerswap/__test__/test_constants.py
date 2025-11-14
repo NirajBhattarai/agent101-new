@@ -1,7 +1,5 @@
 """Tests for SaucerSwap constants."""
 
-import pytest
-
 from packages.blockchain.hedera.saucerswap.constants import (
     NETWORKS,
     SAUCERSWAP_FACTORY_V3_MAINNET,
@@ -49,4 +47,3 @@ def test_factory_addresses_format():
     assert SAUCERSWAP_FACTORY_V3_TESTNET.startswith("0x")
     assert len(SAUCERSWAP_FACTORY_V3_MAINNET) == 42  # 0x + 40 hex chars
     assert len(SAUCERSWAP_FACTORY_V3_TESTNET) == 42
-

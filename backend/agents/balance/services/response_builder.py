@@ -4,19 +4,19 @@ Response building utilities for balance agent.
 Handles construction of balance responses for different chains.
 """
 
-from ..tools import (
-    get_balance_ethereum,
-    get_balance_polygon,
-    get_balance_hedera,
-    get_balance_all_chains,
-)
 from ..core.constants import (
-    RESPONSE_TYPE,
-    CHAIN_ETHEREUM,
-    CHAIN_POLYGON,
-    CHAIN_HEDERA,
     CHAIN_ALL,
+    CHAIN_ETHEREUM,
+    CHAIN_HEDERA,
+    CHAIN_POLYGON,
     DEFAULT_TOTAL_USD_VALUE,
+    RESPONSE_TYPE,
+)
+from ..tools import (
+    get_balance_all_chains,
+    get_balance_ethereum,
+    get_balance_hedera,
+    get_balance_polygon,
 )
 
 
@@ -34,7 +34,7 @@ def build_all_chains_response(account_address: str) -> dict:
         for chain_name, chain_result in result.get("chains", {}).items():
             chain_balances = chain_result.get("balances", [])
             all_balances.extend(add_chain_to_balances(chain_balances, chain_name))
-        
+
         return {
             "type": RESPONSE_TYPE,
             "chain": CHAIN_ALL,
@@ -71,4 +71,3 @@ def build_balance_response(chain: str, account_address: str) -> dict:
     if chain == CHAIN_ALL:
         return build_all_chains_response(account_address)
     return build_unknown_chain_response(chain, account_address)
-

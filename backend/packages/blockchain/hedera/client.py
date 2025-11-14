@@ -31,4 +31,3 @@ class HederaClient:
     def is_connected(self) -> bool:
         """Check if client is connected."""
         return self._client is not None
-

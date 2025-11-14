@@ -1,7 +1,5 @@
 """Tests for Ethereum Uniswap constants."""
 
-import pytest
-
 from packages.blockchain.ethereum.uniswap.constants import (
     NETWORKS,
     UNISWAP_V3_FACTORY_MAINNET,
@@ -56,4 +54,3 @@ def test_factory_addresses_format():
     assert UNISWAP_V3_FACTORY_SEPOLIA.startswith("0x")
     assert len(UNISWAP_V3_FACTORY_MAINNET) == 42  # 0x + 40 hex chars
     assert len(UNISWAP_V3_FACTORY_SEPOLIA) == 42
-

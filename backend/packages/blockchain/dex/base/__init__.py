@@ -3,7 +3,7 @@
 __version__ = "0.1.0"
 
 from packages.blockchain.dex.base.types import PoolInfo, Slot0Data
-from packages.blockchain.dex.base.web3_client_base import BaseUniswapV3Client, FEE_TIERS
+from packages.blockchain.dex.base.web3_client_base import FEE_TIERS, BaseUniswapV3Client
 
 __all__ = [
     "BaseUniswapV3Client",
@@ -11,4 +11,3 @@ __all__ = [
     "PoolInfo",
     "Slot0Data",
 ]
-

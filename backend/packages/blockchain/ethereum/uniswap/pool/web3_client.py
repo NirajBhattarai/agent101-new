@@ -1,6 +1,6 @@
 """Web3 client for interacting with Uniswap V3 pools on Ethereum."""
 
-from packages.blockchain.dex.base import BaseUniswapV3Client, FEE_TIERS
+from packages.blockchain.dex.base import FEE_TIERS, BaseUniswapV3Client
 from packages.blockchain.ethereum.uniswap.constants import NETWORKS
 
 # Re-export FEE_TIERS for backward compatibility

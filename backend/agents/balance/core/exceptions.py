@@ -20,4 +20,3 @@ class QueryParsingError(BalanceAgentError):
     """Exception raised when query parsing fails."""
 
     pass
-

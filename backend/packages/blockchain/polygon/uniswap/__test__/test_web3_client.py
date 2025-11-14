@@ -1,6 +1,7 @@
 """Detailed tests for Polygon Uniswap Web3 client - Real network tests."""
 
 import os
+
 import pytest
 
 from packages.blockchain.polygon.constants import POLYGON_TOKENS
@@ -78,20 +79,16 @@ class TestGetPoolAddress:
     def test_get_pool_address_invalid_fee(self, mainnet_client, sample_tokens):
         """Test that invalid fee tier raises InvalidFeeTierError."""
         from packages.blockchain.dex.utils.errors import InvalidFeeTierError
-        
+
         with pytest.raises(InvalidFeeTierError, match="Invalid fee tier"):
-            mainnet_client.get_pool_address(
-                sample_tokens["WETH"], sample_tokens["USDC"], fee=9999
-            )
+            mainnet_client.get_pool_address(sample_tokens["WETH"], sample_tokens["USDC"], fee=9999)
 
     def test_get_pool_address_same_tokens(self, mainnet_client, sample_tokens):
         """Test that same tokens raise InvalidAddressError."""
         from packages.blockchain.dex.utils.errors import InvalidAddressError
-        
+
         with pytest.raises(InvalidAddressError, match="must be different"):
-            mainnet_client.get_pool_address(
-                sample_tokens["WETH"], sample_tokens["WETH"], fee=3000
-            )
+            mainnet_client.get_pool_address(sample_tokens["WETH"], sample_tokens["WETH"], fee=3000)
 
 
 class TestGetPoolLiquidity:
@@ -153,4 +150,3 @@ class TestFeeTiers:
         assert 3000 in FEE_TIERS
         assert 10000 in FEE_TIERS
         assert len(FEE_TIERS) == 3
-

@@ -21,12 +21,12 @@ except ImportError:
     ADKAgent = None  # ADKAgent may not be available
 
 from .core.constants import (  # noqa: E402
-    get_model_name,
-    check_api_keys,
-    DEFAULT_USER_ID,
+    AGENT_NAME,
     DEFAULT_APP_NAME,
     DEFAULT_SESSION_TIMEOUT,
-    AGENT_NAME,
+    DEFAULT_USER_ID,
+    check_api_keys,
+    get_model_name,
 )
 from .core.instruction import ORCHESTRATOR_INSTRUCTION  # noqa: E402
 
@@ -46,7 +46,7 @@ def build_adk_orchestrator_agent() -> ADKAgent:
     """Build ADK agent wrapper for AG-UI Protocol."""
     if ADKAgent is None:
         raise ImportError("ag_ui_adk is not installed. Install it with: pip install ag-ui-adk")
-    
+
     orchestrator_agent = build_orchestrator_agent()
     return ADKAgent(
         adk_agent=orchestrator_agent,
@@ -55,4 +55,3 @@ def build_adk_orchestrator_agent() -> ADKAgent:
         session_timeout_seconds=DEFAULT_SESSION_TIMEOUT,
         use_in_memory_services=True,
     )
-

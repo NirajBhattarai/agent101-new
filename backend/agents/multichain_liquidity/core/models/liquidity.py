@@ -5,7 +5,9 @@ Pydantic models for liquidity-related data structures.
 """
 
 from typing import Optional
+
 from pydantic import BaseModel, Field
+
 from ..constants import RESPONSE_TYPE
 
 
@@ -33,4 +35,3 @@ class StructuredLiquidity(BaseModel):
     token_b: str = Field(description="Token B address")
     results: list[LiquidityResult] = Field(description="List of liquidity results")
     error: Optional[str] = Field(default=None, description="Error message if any")
-

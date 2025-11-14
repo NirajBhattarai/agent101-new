@@ -5,10 +5,10 @@ Handles symbol-to-address resolution for Ethereum, Polygon, and Hedera chains.
 """
 
 from typing import Optional
-from packages.blockchain.ethereum.constants import ETHEREUM_TOKENS
-from packages.blockchain.polygon.constants import POLYGON_TOKENS
-from packages.blockchain.hedera.constants import HEDERA_TOKENS
 
+from packages.blockchain.ethereum.constants import ETHEREUM_TOKENS
+from packages.blockchain.hedera.constants import HEDERA_TOKENS
+from packages.blockchain.polygon.constants import POLYGON_TOKENS
 
 # Special mappings: ETH -> WETH for DEX pools (since ETH is native, we use wrapped version)
 SYMBOL_ALIASES = {
@@ -21,24 +21,24 @@ SYMBOL_ALIASES = {
 def resolve_token_symbol(symbol: str, chain: str) -> Optional[str]:
     """
     Resolve a token symbol to its address for a specific chain.
-    
+
     Args:
         symbol: Token symbol (e.g., "ETH", "USDT", "WETH")
         chain: Chain name ("ethereum", "polygon", "hedera")
-        
+
     Returns:
         Token address (0x...) or None if not found
     """
     # Normalize symbol
     symbol_upper = symbol.upper().strip()
-    
+
     # Check for aliases first
     if symbol_upper in SYMBOL_ALIASES:
         symbol_upper = SYMBOL_ALIASES[symbol_upper]
-    
+
     # Resolve based on chain
     chain_lower = chain.lower()
-    
+
     if chain_lower == "ethereum":
         if symbol_upper in ETHEREUM_TOKENS:
             return ETHEREUM_TOKENS[symbol_upper]["address"]
@@ -51,7 +51,7 @@ def resolve_token_symbol(symbol: str, chain: str) -> Optional[str]:
     elif chain_lower == "hedera":
         if symbol_upper in HEDERA_TOKENS:
             return HEDERA_TOKENS[symbol_upper]["address"]
-    
+
     return None
 
 
@@ -60,12 +60,12 @@ def resolve_token_pair(
 ) -> tuple[Optional[str], Optional[str]]:
     """
     Resolve a token pair (symbols or addresses) to addresses.
-    
+
     Args:
         token_a: Token A (symbol or address)
         token_b: Token B (symbol or address)
         chain: Chain name ("ethereum", "polygon", "hedera", "all")
-        
+
     Returns:
         Tuple of (token_a_address, token_b_address) or (None, None) if not found
     """
@@ -83,7 +83,7 @@ def resolve_token_pair(
             )
         else:
             resolved_a = resolve_token_symbol(token_a, chain)
-    
+
     if token_b and token_b.startswith("0x") and len(token_b) == 42:
         resolved_b = token_b
     else:
@@ -97,6 +97,5 @@ def resolve_token_pair(
             )
         else:
             resolved_b = resolve_token_symbol(token_b, chain)
-    
-    return resolved_a, resolved_b
 
+    return resolved_a, resolved_b

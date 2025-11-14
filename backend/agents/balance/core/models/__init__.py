@@ -1,6 +1,5 @@
 """Balance models."""
 
-from .balance import TokenBalance, StructuredBalance
+from .balance import StructuredBalance, TokenBalance
 
 __all__ = ["TokenBalance", "StructuredBalance"]
-

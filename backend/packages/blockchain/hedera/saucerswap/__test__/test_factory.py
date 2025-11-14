@@ -1,6 +1,7 @@
 """Tests for SaucerSwap factory functions - Real network tests."""
 
 import os
+
 import pytest
 
 from packages.blockchain.hedera.constants import HEDERA_TOKENS
@@ -103,7 +104,7 @@ def test_get_v3_pair_address_all_fee_tiers():
             else:
                 raise
 
-    print(f"\nPool addresses for USDC/HBAR:")
+    print("\nPool addresses for USDC/HBAR:")
     for fee, address in results.items():
         print(f"  Fee {fee}: {address}")
 

@@ -4,15 +4,20 @@ Multi-Chain Liquidity Agent Server (ADK + A2A Protocol)
 Starts the Multi-Chain Liquidity Agent as an A2A Protocol server.
 """
 
-import uvicorn
 import os
 import warnings
+
+import uvicorn
+
 # Suppress deprecation warning for agent.json endpoint (will be fixed in future a2a-server update)
-warnings.filterwarnings("ignore", message=".*Deprecated agent card endpoint.*", category=DeprecationWarning)
+warnings.filterwarnings(
+    "ignore", message=".*Deprecated agent card endpoint.*", category=DeprecationWarning
+)
 from a2a.server.apps import A2AStarletteApplication
 from a2a.server.request_handlers import DefaultRequestHandler
 from a2a.server.tasks import InMemoryTaskStore
 from a2a.types import AgentCapabilities, AgentCard, AgentSkill
+
 from .executor import LiquidityExecutor
 
 port = int(os.getenv("LIQUIDITY_PORT", 9998))
@@ -27,7 +32,16 @@ skill = AgentSkill(
         "Supports multiple fee tiers (500, 3000, 10000 basis points) and returns "
         "pool addresses, liquidity amounts, current prices, and tick information."
     ),
-    tags=["defi", "liquidity", "blockchain", "multi-chain", "adk", "parallel", "uniswap", "saucerswap"],
+    tags=[
+        "defi",
+        "liquidity",
+        "blockchain",
+        "multi-chain",
+        "adk",
+        "parallel",
+        "uniswap",
+        "saucerswap",
+    ],
     examples=[
         "Get liquidity for token pair 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48 and 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2 on all chains",
         "Check liquidity for 0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174 and 0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270 on Polygon with fee tier 3000",
@@ -84,4 +98,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

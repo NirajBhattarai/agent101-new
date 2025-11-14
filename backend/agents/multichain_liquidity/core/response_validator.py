@@ -5,9 +5,10 @@ Handles validation and serialization of liquidity responses.
 """
 
 import json
+
 from .constants import RESPONSE_TYPE
-from .models.liquidity import StructuredLiquidity
 from .exceptions import ValidationError
+from .models.liquidity import StructuredLiquidity
 
 
 def validate_and_serialize_response(liquidity_data: dict) -> str:
@@ -45,4 +46,3 @@ def log_response_info(token_a: str, token_b: str, chain: str, response: str) -> 
 def validate_json(response: str) -> None:
     """Validate that response is valid JSON."""
     json.loads(response)
-

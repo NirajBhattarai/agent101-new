@@ -1,6 +1,6 @@
 """Web3 client for interacting with SaucerSwap pools."""
 
-from packages.blockchain.dex.base import BaseUniswapV3Client, FEE_TIERS
+from packages.blockchain.dex.base import FEE_TIERS, BaseUniswapV3Client
 from packages.blockchain.hedera.saucerswap.constants import NETWORKS
 
 # Re-export FEE_TIERS for backward compatibility

@@ -6,6 +6,7 @@ as opposed to core/response_validator.py which handles domain-level validation.
 """
 
 import json
+
 from ..core.constants import ERROR_EMPTY_RESPONSE, ERROR_INVALID_JSON
 
 
@@ -13,17 +14,16 @@ def validate_response_content(content: str) -> str:
     """Validate response content at executor level."""
     if not content or not content.strip():
         raise ValueError(ERROR_EMPTY_RESPONSE)
-    
+
     # Validate JSON
     try:
         json.loads(content)
     except json.JSONDecodeError:
         raise ValueError(ERROR_INVALID_JSON)
-    
+
     return content
 
 
 def log_sending_response(content: str) -> None:
     """Log sending response."""
     print(f"📤 Sending liquidity response (length: {len(content)} chars)")
-

@@ -1,6 +1,7 @@
 """Tests for Ethereum Uniswap factory functions - Real network tests."""
 
 import os
+
 import pytest
 
 from packages.blockchain.ethereum.constants import ETHEREUM_TOKENS
@@ -94,4 +95,3 @@ def test_validate_pair_address():
     # Currently returns False as it's not implemented
     result = validate_pair_address("0x123", "0x456", "0x789", fee=3000, network="mainnet")
     assert result is False
-

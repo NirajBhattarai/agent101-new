@@ -1,13 +1,14 @@
 """Polygon liquidity tool."""
 
 import os
+
 from packages.blockchain.polygon.uniswap.pool.web3_client import (
     UniswapWeb3Client as PolygonUniswapClient,
 )
 
 POLYGON_MAINNET_RPC = os.getenv(
-    "POLYGON_MAINNET_RPC", 
-    "https://polygon-rpc.com"  # More reliable public RPC
+    "POLYGON_MAINNET_RPC",
+    "https://polygon-rpc.com",  # More reliable public RPC
 )
 
 
@@ -24,9 +25,7 @@ def get_polygon_liquidity(token_a: str, token_b: str, fee: int = 3000) -> dict:
         Dictionary with pool address, liquidity, and slot0 data
     """
     try:
-        client = PolygonUniswapClient(
-            rpc_url=POLYGON_MAINNET_RPC, network="mainnet"
-        )
+        client = PolygonUniswapClient(rpc_url=POLYGON_MAINNET_RPC, network="mainnet")
         pool_info = client.get_pool_info(token_a, token_b, fee=fee)
 
         if pool_info:
@@ -63,4 +62,3 @@ def get_polygon_liquidity(token_a: str, token_b: str, fee: int = 3000) -> dict:
             "status": "error",
             "error": str(e),
         }
-

@@ -4,7 +4,9 @@
 UNISWAP_V3_FACTORY_MAINNET = "0x1F98431c8aD98523631AE4a59f267346ea31F984"
 
 # Polygon Mumbai Testnet Uniswap V3 Factory Address
-UNISWAP_V3_FACTORY_MUMBAI = "0x1F98431c8aD98523631AE4a59f267346ea31F984"  # Same as mainnet typically
+UNISWAP_V3_FACTORY_MUMBAI = (
+    "0x1F98431c8aD98523631AE4a59f267346ea31F984"  # Same as mainnet typically
+)
 
 # Network configurations
 NETWORKS = {
@@ -43,4 +45,3 @@ POLYGON_TOKENS = {
         "decimals": 18,
     },
 }
-

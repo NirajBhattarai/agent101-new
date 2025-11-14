@@ -23,4 +23,3 @@ class PoolNotFoundError(DEXError):
     """Raised when a pool is not found."""
 
     pass
-

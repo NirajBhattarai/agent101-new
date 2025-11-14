@@ -6,11 +6,12 @@ Handles extraction of token addresses and chain detection from queries.
 
 import re
 from typing import Optional
+
 from ..core.constants import (
-    CHAIN_ETHEREUM,
-    CHAIN_POLYGON,
-    CHAIN_HEDERA,
     CHAIN_ALL,
+    CHAIN_ETHEREUM,
+    CHAIN_HEDERA,
+    CHAIN_POLYGON,
 )
 from .token_resolver import resolve_token_pair
 
@@ -51,33 +52,54 @@ def extract_token_symbols(query: str) -> tuple[Optional[str], Optional[str]]:
     # Pattern for EVM addresses (0x followed by 40 hex chars)
     evm_pattern = r"0x[a-fA-F0-9]{40}"
     addresses = re.findall(evm_pattern, query)
-    
+
     # If we found addresses, return them
     if len(addresses) >= 2:
         return addresses[0], addresses[1]
     elif len(addresses) == 1:
         return addresses[0], None
-    
+
     # If no addresses found, try to extract token symbols
     query_upper = query.upper()
-    
+
     # Token symbol pattern (2-10 uppercase letters/numbers)
     symbol_pattern = r"\b([A-Z0-9]{2,10})\b"
     symbols = re.findall(symbol_pattern, query_upper)
-    
+
     # Filter out common non-token words
     excluded_words = {
-        "FOR", "AND", "THE", "GET", "FIND", "SHOW", "LIQUIDITY", "POOL", "PAIR",
-        "CHAIN", "ETHEREUM", "POLYGON", "HEDERA", "ALL", "MAINNET",
-        "TESTNET", "FEE", "TIER", "BPS", "WITH", "ON", "OF", "TO", "FROM"
+        "FOR",
+        "AND",
+        "THE",
+        "GET",
+        "FIND",
+        "SHOW",
+        "LIQUIDITY",
+        "POOL",
+        "PAIR",
+        "CHAIN",
+        "ETHEREUM",
+        "POLYGON",
+        "HEDERA",
+        "ALL",
+        "MAINNET",
+        "TESTNET",
+        "FEE",
+        "TIER",
+        "BPS",
+        "WITH",
+        "ON",
+        "OF",
+        "TO",
+        "FROM",
     }
-    
+
     # Extract potential token symbols
     potential_tokens = [s for s in symbols if s not in excluded_words and len(s) >= 2]
-    
+
     if len(potential_tokens) >= 2:
         return potential_tokens[0], potential_tokens[1]
-    
+
     return None, None
 
 
@@ -90,34 +112,34 @@ def extract_token_addresses(query: str) -> tuple[Optional[str], Optional[str]]:
     # Pattern for EVM addresses (0x followed by 40 hex chars)
     evm_pattern = r"0x[a-fA-F0-9]{40}"
     addresses = re.findall(evm_pattern, query)
-    
+
     # If we found addresses, use them
     if len(addresses) >= 2:
         return addresses[0], addresses[1]
     elif len(addresses) == 1:
         return addresses[0], None
-    
+
     # Detect chain from query
     chain_detected = detect_chain_from_query(query)
     chain = chain_detected if chain_detected else CHAIN_ALL
-    
+
     # Extract symbols
     token_a_symbol, token_b_symbol = extract_token_symbols(query)
-    
+
     if not token_a_symbol or not token_b_symbol:
         return None, None
-    
+
     # For "all" chains, return symbols so agent can resolve per-chain
     # For specific chains, resolve immediately
     if chain == CHAIN_ALL:
         return token_a_symbol, token_b_symbol
-    
+
     # Resolve symbols to addresses for specific chain
     token_a, token_b = resolve_token_pair(token_a_symbol, token_b_symbol, chain)
-    
+
     if token_a and token_b:
         return token_a, token_b
-    
+
     return None, None
 
 
@@ -130,10 +152,9 @@ def extract_fee_tier(query: str) -> Optional[int]:
         (r"0\.3%", lambda x: 3000),
         (r"1%", lambda x: 10000),
     ]
-    
+
     for pattern, converter in fee_patterns:
         match = re.search(pattern, query)
         if match:
             return converter(match.group(1) if match.groups() else match.group(0))
     return None
-

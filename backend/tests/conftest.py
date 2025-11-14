@@ -23,4 +23,3 @@ def sample_hedera_token_ids():
         "USDT": "0.0.1055472",
         "SAUCE": "0.0.731861",
     }
-

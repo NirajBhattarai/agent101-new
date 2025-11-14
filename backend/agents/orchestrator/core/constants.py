@@ -27,4 +27,3 @@ def check_api_keys() -> None:
     """Check if API keys are configured."""
     if not os.getenv("GOOGLE_API_KEY") and not os.getenv("GEMINI_API_KEY"):
         print("⚠️  Warning: No API key found! Set GOOGLE_API_KEY or GEMINI_API_KEY")
-

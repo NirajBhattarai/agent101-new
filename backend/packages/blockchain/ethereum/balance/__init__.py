@@ -1,9 +1,9 @@
 """Ethereum balance utilities."""
 
 from .balance_client import (
-    get_token_balance_ethereum,
     get_multiple_token_balances_ethereum,
     get_native_eth_balance,
+    get_token_balance_ethereum,
 )
 
 __all__ = [
@@ -11,4 +11,3 @@ __all__ = [
     "get_multiple_token_balances_ethereum",
     "get_native_eth_balance",
 ]
-

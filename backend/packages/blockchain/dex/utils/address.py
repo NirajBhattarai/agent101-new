@@ -25,13 +25,13 @@ def normalize_address(address: str) -> str:
     # Convert to lowercase first, then to checksum
     # Remove any whitespace and ensure proper format
     address = address.strip()
-    
+
     # Normalize to lowercase (handle any case)
     if len(address) >= 2 and address.startswith("0x"):
         address = "0x" + address[2:].lower()
     else:
         raise ValueError(f"Address must start with '0x' and be at least 42 chars, got: {address}")
-    
+
     # Ensure it's exactly 42 characters
     if len(address) != 42:
         raise ValueError(f"Invalid address length: {len(address)} (expected 42)")
@@ -57,4 +57,3 @@ def validate_address(address: str) -> bool:
         return True
     except (ValueError, Exception):
         return False
-

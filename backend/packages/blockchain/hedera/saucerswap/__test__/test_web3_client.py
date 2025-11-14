@@ -1,6 +1,7 @@
 """Detailed tests for SaucerSwap Web3 client - Real network tests."""
 
 import os
+
 import pytest
 
 from packages.blockchain.hedera.constants import HEDERA_TOKENS
@@ -134,27 +135,23 @@ class TestGetPoolAddress:
                     raise
 
         # At least log what we got
-        print(f"\nPool addresses for USDC/HBAR:")
+        print("\nPool addresses for USDC/HBAR:")
         for fee, address in results.items():
             print(f"  Fee {fee}: {address}")
 
     def test_get_pool_address_invalid_fee(self, testnet_client, sample_tokens):
         """Test that invalid fee tier raises InvalidFeeTierError."""
         from packages.blockchain.dex.utils.errors import InvalidFeeTierError
-        
+
         with pytest.raises(InvalidFeeTierError, match="Invalid fee tier"):
-            testnet_client.get_pool_address(
-                sample_tokens["USDC"], sample_tokens["HBAR"], fee=9999
-            )
+            testnet_client.get_pool_address(sample_tokens["USDC"], sample_tokens["HBAR"], fee=9999)
 
     def test_get_pool_address_same_tokens(self, testnet_client, sample_tokens):
         """Test that same tokens raise InvalidAddressError."""
         from packages.blockchain.dex.utils.errors import InvalidAddressError
-        
+
         with pytest.raises(InvalidAddressError, match="must be different"):
-            testnet_client.get_pool_address(
-                sample_tokens["USDC"], sample_tokens["USDC"], fee=3000
-            )
+            testnet_client.get_pool_address(sample_tokens["USDC"], sample_tokens["USDC"], fee=3000)
 
     def test_get_pool_address_token_sorting(self, testnet_client, sample_tokens):
         """Test that tokens are sorted correctly - should return same address."""
@@ -239,7 +236,7 @@ class TestGetPoolSlot0:
                 assert isinstance(slot0["tick"], int)
                 assert isinstance(slot0["unlocked"], bool)
 
-                print(f"\nPool slot0:")
+                print("\nPool slot0:")
                 print(f"  sqrtPriceX96: {slot0['sqrtPriceX96']}")
                 print(f"  tick: {slot0['tick']}")
                 print(f"  unlocked: {slot0['unlocked']}")
@@ -276,7 +273,7 @@ class TestGetPoolInfo:
                 assert isinstance(pool_info["liquidity"], int)
                 assert isinstance(pool_info["slot0"], dict)
 
-                print(f"\nPool info:")
+                print("\nPool info:")
                 print(f"  Address: {pool_info['pool_address']}")
                 print(f"  Fee: {pool_info['fee']}")
                 print(f"  Liquidity: {pool_info['liquidity']}")
@@ -298,10 +295,12 @@ class TestGetPoolInfo:
         assert 3000 in results
         assert 10000 in results
 
-        print(f"\nAll fee tier pools for USDC/HBAR:")
+        print("\nAll fee tier pools for USDC/HBAR:")
         for fee, pool_info in results.items():
             if pool_info:
-                print(f"  Fee {fee}: {pool_info['pool_address']} (liquidity: {pool_info['liquidity']})")
+                print(
+                    f"  Fee {fee}: {pool_info['pool_address']} (liquidity: {pool_info['liquidity']})"
+                )
             else:
                 print(f"  Fee {fee}: No pool exists")
 

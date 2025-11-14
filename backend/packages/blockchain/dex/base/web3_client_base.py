@@ -1,7 +1,7 @@
 """Base class for Uniswap V3 Web3 clients."""
 
 import logging
-from typing import Any, Optional
+from typing import Optional
 
 from web3 import Web3
 from web3.contract import Contract
@@ -117,9 +117,7 @@ class BaseUniswapV3Client:
         """
         try:
             pool_address = normalize_address(pool_address)
-            pool_contract = self.w3.eth.contract(
-                address=pool_address, abi=UNISWAP_V3_POOL_ABI
-            )
+            pool_contract = self.w3.eth.contract(address=pool_address, abi=UNISWAP_V3_POOL_ABI)
             liquidity = pool_contract.functions.liquidity().call()
             return liquidity
         except ValueError as e:
@@ -152,9 +150,7 @@ class BaseUniswapV3Client:
         """
         try:
             pool_address = normalize_address(pool_address)
-            pool_contract = self.w3.eth.contract(
-                address=pool_address, abi=UNISWAP_V3_POOL_ABI
-            )
+            pool_contract = self.w3.eth.contract(address=pool_address, abi=UNISWAP_V3_POOL_ABI)
             slot0 = pool_contract.functions.slot0().call()
 
             return Slot0Data(
@@ -196,22 +192,20 @@ class BaseUniswapV3Client:
             f"Searching for pool: token_a={token_a}, token_b={token_b}, "
             f"network={self.network_name}, starting_fee={fee}"
         )
-        
+
         # Create ordered list of fees to try: start with provided fee, then try others
         fees_to_try = [fee] + [f for f in FEE_TIERS if f != fee]
-        
+
         for current_fee in fees_to_try:
             self.logger.debug(f"Trying fee tier: {current_fee} bps")
-            
+
             try:
                 pool_address = self.get_pool_address(token_a, token_b, current_fee)
                 if not pool_address:
                     self.logger.debug(f"No pool found for fee tier {current_fee} bps")
                     continue
 
-                self.logger.info(
-                    f"Pool address found for fee {current_fee} bps: {pool_address}"
-                )
+                self.logger.info(f"Pool address found for fee {current_fee} bps: {pool_address}")
 
                 try:
                     liquidity = self.get_pool_liquidity(pool_address)
@@ -239,7 +233,7 @@ class BaseUniswapV3Client:
                     self.logger.error(
                         f"Error retrieving pool info for fee {current_fee} bps, "
                         f"pool_address={pool_address}: {str(e)}",
-                        exc_info=True
+                        exc_info=True,
                     )
                     # If this fee tier fails, try the next one
                     continue
@@ -248,7 +242,7 @@ class BaseUniswapV3Client:
                     f"Error getting pool address for fee {current_fee} bps: {str(e)}"
                 )
                 continue
-        
+
         # No pool found for any fee tier
         self.logger.warning(
             f"No pool found for any fee tier. Tried fees: {fees_to_try}. "
@@ -279,4 +273,3 @@ class BaseUniswapV3Client:
             except Exception:
                 results[fee] = None
         return results
-

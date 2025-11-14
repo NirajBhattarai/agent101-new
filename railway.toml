@@ -1,8 +1,8 @@
 [build]
 builder = "NIXPACKS"
-# Note: If Root Directory is set to "backend", buildCommand runs from backend directory
-# Nixpacks provides Python, use 'python' command (not python3)
-buildCommand = "python -m pip install --upgrade pip && python -m pip install uv && uv sync"
+# Use uv standalone installer (doesn't require Python)
+# Nixpacks will auto-detect Python from requirements.txt/pyproject.toml
+buildCommand = "curl -LsSf https://astral.sh/uv/install.sh | sh && export PATH=\"$HOME/.cargo/bin:$PATH\" && uv sync"
 
 [deploy]
 # Note: Start command should be set per service in Railway dashboard

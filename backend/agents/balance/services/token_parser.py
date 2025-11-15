@@ -105,29 +105,6 @@ def is_popular_tokens_query(query: str) -> bool:
     return any(keyword in query_lower for keyword in popular_keywords)
 
 
-def is_token_discovery_query(query: str) -> bool:
-    """
-    Check if query is asking to discover/fetch popular tokens from Ethereum.
-
-    Args:
-        query: User query string
-
-    Returns:
-        True if query is asking to discover tokens, False otherwise
-    """
-    query_lower = query.lower()
-    discovery_keywords = [
-        "find popular tokens",
-        "discover tokens",
-        "fetch popular tokens",
-        "get popular tokens on ethereum",
-        "find tokens on ethereum",
-        "discover tokens on ethereum",
-        "fetch tokens",
-    ]
-    return any(keyword in query_lower for keyword in discovery_keywords)
-
-
 def is_all_chains_token_query(query: str) -> bool:
     """
     Check if query is asking for a token across all chains.

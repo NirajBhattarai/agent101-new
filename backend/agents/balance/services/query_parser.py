@@ -18,7 +18,6 @@ from .token_parser import (
     extract_token_symbol,
     is_all_chains_token_query,
     is_popular_tokens_query,
-    is_token_discovery_query,
     is_token_specific_query,
 )
 
@@ -137,7 +136,6 @@ def parse_query_intent(query: str) -> dict:
         - token_symbol: Token symbol if specified
         - is_token_specific: Whether query is for a specific token
         - is_popular_tokens: Whether query is for popular tokens
-        - is_token_discovery: Whether query is for token discovery
         - is_all_chains_token: Whether query is for token across all chains
         - address_error: Error message if address validation failed
     """
@@ -145,10 +143,9 @@ def parse_query_intent(query: str) -> dict:
     chain = parse_chain(query, account_address)
     token_symbol = extract_token_symbol(query)
 
-    # Validate address (don't require for token discovery or popular tokens queries)
-    is_discovery = is_token_discovery_query(query)
+    # Validate address (don't require for popular tokens queries)
     is_popular = is_popular_tokens_query(query)
-    require_address = not (is_discovery or is_popular)
+    require_address = not is_popular
 
     validated_address, address_error = validate_account_address(account_address, require_address)
 
@@ -162,7 +159,6 @@ def parse_query_intent(query: str) -> dict:
         "token_symbol": token_symbol,
         "is_token_specific": is_token_specific_query(query),
         "is_popular_tokens": is_popular_tokens_query(query),
-        "is_token_discovery": is_token_discovery_query(query),
         "is_all_chains_token": is_all_chains_token_query(query),
         "address_error": address_error,
     }

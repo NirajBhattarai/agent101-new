@@ -20,11 +20,9 @@ from ..tools import (
     get_balance_hedera,
     get_balance_polygon,
 )
-from ..tools.token_discovery import (
-    get_popular_tokens,
-)
+from ..tools.popular_tokens import get_popular_tokens
 
-# Token search moved to Token Research Agent
+# Token search and discovery moved to Token Research Agent
 from .token_filter import filter_balances_by_token
 
 
@@ -186,69 +184,6 @@ def build_popular_tokens_response(account_address: Optional[str]) -> dict:
         "query_type": "popular_tokens",
         "balances": all_balances,
         "total_usd_value": DEFAULT_TOTAL_USD_VALUE,
-    }
-
-
-def build_token_discovery_response(discovery_result: dict) -> dict:
-    """
-    Build response for token discovery results.
-    Formats tokens as balance entries so orchestrator can understand the response.
-
-    Args:
-        discovery_result: Result from fetch_popular_tokens
-
-    Returns:
-        Formatted response dictionary with tokens formatted as balance entries
-    """
-    if discovery_result.get("status") == "error":
-        return {
-            "type": RESPONSE_TYPE,
-            "chain": CHAIN_ALL,
-            "account_address": "N/A",
-            "balances": [],
-            "total_usd_value": DEFAULT_TOTAL_USD_VALUE,
-            "error": discovery_result.get("error", "Failed to discover tokens"),
-            "query_type": "token_discovery",
-            "success": False,
-        }
-
-    tokens_by_chain = discovery_result.get("tokens_by_chain", {})
-    total_tokens = discovery_result.get("total_tokens", 0)
-
-    # Format tokens as balance entries for better visibility
-    balance_entries = []
-    for chain_name, tokens in tokens_by_chain.items():
-        for token in tokens:
-            balance_entries.append(
-                {
-                    "token_type": "token",
-                    "token_symbol": token.get("symbol", ""),
-                    "token_address": token.get("address", ""),
-                    "chain": chain_name,
-                    "balance": "0",  # Discovery doesn't fetch balances
-                    "balance_raw": "0",
-                    "decimals": token.get("decimals", 18),
-                    "name": token.get("name", ""),
-                }
-            )
-
-    # Format as balance-like response with clear success indicator
-    return {
-        "type": RESPONSE_TYPE,
-        "chain": CHAIN_ALL,
-        "account_address": "N/A",
-        "balances": balance_entries,
-        "total_usd_value": DEFAULT_TOTAL_USD_VALUE,
-        "query_type": "token_discovery",
-        "success": True,
-        "discovery_result": {
-            "status": "success",
-            "total_tokens": total_tokens,
-            "tokens_by_chain": tokens_by_chain,
-            "message": discovery_result.get(
-                "message", f"Successfully discovered {total_tokens} popular tokens across chains"
-            ),
-        },
     }
 
 

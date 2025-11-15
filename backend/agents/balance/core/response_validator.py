@@ -118,16 +118,6 @@ def validate_json(response: str) -> None:
         if data.get("type") != RESPONSE_TYPE:
             raise ValidationError(f"Response type must be '{RESPONSE_TYPE}'")
 
-        # For token discovery queries, check if it's a successful response
-        if data.get("query_type") == "token_discovery":
-            if data.get("success") is False or (data.get("error") and not data.get("success")):
-                # This is an error response, which is valid
-                pass
-            elif data.get("success") is True or data.get("discovery_result"):
-                # Success response should have discovery_result or tokens
-                if not data.get("discovery_result") and len(data.get("balances", [])) == 0:
-                    # No tokens discovered but marked as success - this might be confusing
-                    pass  # Still valid, just no tokens found
 
     except json.JSONDecodeError as e:
         raise ValidationError(f"Invalid JSON format: {str(e)}") from e

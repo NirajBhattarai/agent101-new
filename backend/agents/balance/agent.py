@@ -20,9 +20,7 @@ from .services.response_builder import (
     build_balance_response,
     build_popular_tokens_response,
     build_token_balance_response,
-    build_token_discovery_response,
 )
-from .tools.token_fetcher import fetch_popular_tokens
 
 
 class BalanceAgent:
@@ -37,6 +35,8 @@ class BalanceAgent:
         - Token across all chains: "get USDT balance"
         - Popular tokens: "get popular tokens"
         - Standard balance queries: "get balance on Polygon"
+        
+        Note: Token discovery queries should be handled by Token Research Agent.
         """
         print(f"🔍 Balance Agent received query: {query}")
 
@@ -47,7 +47,6 @@ class BalanceAgent:
             chain = intent["chain"]
             token_symbol = intent.get("token_symbol")
             is_popular_tokens = intent.get("is_popular_tokens", False)
-            is_token_discovery = intent.get("is_token_discovery", False)
             is_all_chains_token = intent.get("is_all_chains_token", False)
             address_error = intent.get("address_error")
 
@@ -70,13 +69,8 @@ class BalanceAgent:
                 log_response_info(account_address or "unknown", chain, response)
                 return response
 
-            # Handle token discovery query (find popular tokens on Ethereum)
-            if is_token_discovery:
-                print("🔍 Discovering popular tokens from Ethereum and mapping across chains...")
-                discovery_result = fetch_popular_tokens(limit=5)  # Limit to 5 to avoid rate limits
-                balance_data = build_token_discovery_response(discovery_result)
             # Handle popular tokens query (get balances of popular tokens)
-            elif is_popular_tokens:
+            if is_popular_tokens:
                 print("📊 Fetching popular tokens balances...")
                 balance_data = build_popular_tokens_response(account_address)
             # Handle token across all chains

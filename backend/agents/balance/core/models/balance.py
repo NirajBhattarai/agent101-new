@@ -36,7 +36,7 @@ class StructuredBalance(BaseModel):
     )
     error: Optional[str] = Field(default=None, description="Error message if any")
     query_type: Optional[str] = Field(
-        default=None, description="Type of query (e.g., token_discovery)"
+        default=None, description="Type of query (e.g., popular_tokens)"
     )
     success: Optional[bool] = Field(
         default=None, description="Success indicator for discovery queries"

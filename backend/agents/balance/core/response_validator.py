@@ -118,6 +118,5 @@ def validate_json(response: str) -> None:
         if data.get("type") != RESPONSE_TYPE:
             raise ValidationError(f"Response type must be '{RESPONSE_TYPE}'")
 
-
     except json.JSONDecodeError as e:
         raise ValidationError(f"Invalid JSON format: {str(e)}") from e

@@ -1,7 +1,6 @@
 """Popular tokens utility for balance agent."""
 
 import os
-from typing import Optional
 
 import requests
 
@@ -77,4 +76,3 @@ def _get_default_popular_tokens() -> list[dict]:
         {"symbol": "WBTC", "name": "Wrapped Bitcoin", "id": "wrapped-bitcoin"},
         {"symbol": "UNI", "name": "Uniswap", "id": "uniswap"},
     ]
-

@@ -2,6 +2,34 @@
 Balance Agent Server (ADK + A2A Protocol)
 
 Starts the Balance Agent as an A2A Protocol server.
+
+Example Component Structure:
+    This module serves as the entry point for the Balance Agent server. It:
+
+    1. Configures the A2A Protocol server with Balance Agent capabilities
+    2. Defines the agent skill with examples and metadata
+    3. Creates the agent card for service discovery
+    4. Initializes the server with BalanceExecutor
+
+    Example Usage:
+        # Run the server directly
+        python -m agents.balance
+
+        # Or import and run programmatically
+        from agents.balance import main
+        main()
+
+    Example Server Configuration:
+        - Port: 9997 (default) or from PORT/BALANCE_PORT env vars
+        - Protocol: A2A Protocol (Agent-to-Agent)
+        - Handler: DefaultRequestHandler with BalanceExecutor
+        - Task Store: InMemoryTaskStore
+
+    Example Agent Capabilities:
+        - Query balances on Ethereum, Polygon, Hedera
+        - Support for native tokens and ERC-20/HTS tokens
+        - Multi-chain balance aggregation
+        - Popular tokens discovery
 """
 
 import os
@@ -17,6 +45,9 @@ from .executor import BalanceExecutor
 # Railway uses PORT env var, fallback to BALANCE_PORT or default
 port = int(os.getenv("PORT", os.getenv("BALANCE_PORT", 9997)))
 
+cardUrl = os.getenv("RENDER_EXTERNAL_URL", f"http://localhost:{port}")
+
+
 skill = AgentSkill(
     id="balance_agent",
     name="Balance Query Agent",
@@ -30,7 +61,6 @@ skill = AgentSkill(
     ],
 )
 
-cardUrl = os.getenv("RENDER_EXTERNAL_URL", f"http://localhost:{port}")
 public_agent_card = AgentCard(
     name="Balance Agent",
     description="Agent that retrieves account balance information from multiple blockchain chains using packages/blockchain",

@@ -58,8 +58,18 @@ class BalanceExecutor(AgentExecutor):
         event_queue: EventQueue,
     ) -> None:
         """Execute the balance agent request."""
+        # Log context details to debug request structure
+        print(f"🔍 Balance Executor - Context details:")
+        print(f"   Context type: {type(context)}")
+        print(f"   Context attributes: {dir(context)}")
+        if hasattr(context, 'request'):
+            print(f"   Has request attribute: True")
+            if hasattr(context.request, 'params'):
+                print(f"   Request params: {context.request.params}")
         query = context.get_user_input()
+        print(f"📥 Balance Executor received request query: {query}")
         session_id = _get_session_id(context)
+        print(f"   Session ID: {session_id}")
         try:
             content = await self.agent.invoke(query, session_id)
 

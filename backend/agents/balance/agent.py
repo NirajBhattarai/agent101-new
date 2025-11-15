@@ -23,6 +23,9 @@ from .services.response_builder import (
 )
 
 
+
+
+
 class BalanceAgent:
     """Agent that retrieves account balance information from blockchain chains using direct tool calls."""
 
@@ -35,7 +38,7 @@ class BalanceAgent:
         - Token across all chains: "get USDT balance"
         - Popular tokens: "get popular tokens"
         - Standard balance queries: "get balance on Polygon"
-        
+
         Note: Token discovery queries should be handled by Token Research Agent.
         """
         print(f"🔍 Balance Agent received query: {query}")

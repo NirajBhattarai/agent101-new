@@ -40,12 +40,10 @@ from .services.executor_validator import (  # noqa: E402
     validate_response_content,
 )
 from .services.response_builder import (
+    build_all_chains_response,
     build_all_chains_token_response,
-    build_balance_response,
     build_popular_tokens_response,
-    build_token_balance_response,
 )
-from .token_extractor_agent import parse_token_response
 
 
 def _get_session_id(context: RequestContext) -> str:
@@ -141,69 +139,47 @@ class BalanceExecutor(AgentExecutor):
 
             # Get the final response from session state
             # The balance extraction agent stores result in session.state['balance_data']
-            # Parse responses from both agents
-            parse_token_response(session)  # Token data parsed but not used in current flow
             balance_data = parse_balance_response(session)
 
-            # Check if this is already a tool response (agent used tools directly)
+            # Check if agent returned tool response (agent should always call tools)
             if (
                 isinstance(balance_data, dict)
                 and "type" in balance_data
-                and "balances" in balance_data
+                and ("balances" in balance_data or "chains" in balance_data)
             ):
-                # Agent returned tool response directly - use it as-is
-                balance_response = balance_data
+                # Format/aggregate the agent's response based on query type
+                query_type = balance_data.get("query_type", "standard_balance")
+                token_symbol = balance_data.get("token_symbol")
+                chain = balance_data.get("chain", "unknown")
+
+                if query_type == "popular_tokens":
+                    balance_response = build_popular_tokens_response(balance_data)
+                elif query_type == "all_chains_token" and token_symbol:
+                    balance_response = build_all_chains_token_response(balance_data, token_symbol)
+                elif chain == "all" or balance_data.get("type") == "balance_summary":
+                    balance_response = build_all_chains_response(balance_data, token_symbol)
+                else:
+                    balance_response = balance_data
+
                 content = validate_and_serialize_response(balance_response)
                 account_address = balance_response.get("account_address", "unknown")
                 chain = balance_response.get("chain", "unknown")
                 log_response_info(str(account_address), chain, content)
             else:
-                # Check for errors in extraction response
+                # Handle error cases (agent didn't call tools or extraction failed)
                 address_error = balance_data.get("address_error")
-                if address_error:
-                    error_msg = (
-                        ERROR_ACCOUNT_ADDRESS_REQUIRED
-                        if "required" in str(address_error).lower()
-                        else ERROR_INVALID_ACCOUNT_ADDRESS
-                    )
-                    chain = balance_data.get("chain", "unknown")
-                    account_address = balance_data.get("account_address") or "N/A"
-                    balance_response = build_error_response(
-                        chain, str(account_address), f"{error_msg}: {address_error}"
-                    )
-                    content = validate_and_serialize_response(balance_response)
-                else:
-                    # Get execution parameters
-                    chain = balance_data.get("chain", "unknown")
-                    account_address = balance_data.get("account_address") or "N/A"
-                    token_symbol = balance_data.get("token_symbol")
-                    query_type = balance_data.get("query_type", "standard_balance")
-
-                    # If chain is unknown but address is provided, default to "all" chains
-                    if chain == "unknown" and account_address and account_address != "N/A":
-                        print(
-                            "🔄 Chain is unknown but address provided, defaulting to 'all' chains"
-                        )
-                        chain = "all"
-
-                    # Execute the appropriate balance fetching function
-                    if query_type == "popular_tokens":
-                        balance_response = build_popular_tokens_response(str(account_address))
-                    elif query_type == "all_chains_token" and token_symbol:
-                        balance_response = build_all_chains_token_response(
-                            str(account_address), token_symbol
-                        )
-                    elif query_type == "specific_token_chain" and token_symbol and chain != "all":
-                        balance_response = build_token_balance_response(
-                            chain, str(account_address), token_symbol
-                        )
-                    else:
-                        balance_response = build_balance_response(
-                            chain, str(account_address), token_symbol
-                        )
-
-                    content = validate_and_serialize_response(balance_response)
-                    log_response_info(str(account_address), chain, content)
+                error_msg = (
+                    ERROR_ACCOUNT_ADDRESS_REQUIRED
+                    if address_error and "required" in str(address_error).lower()
+                    else ERROR_INVALID_ACCOUNT_ADDRESS
+                    if address_error
+                    else "Agent did not call tools. Please ensure agent calls balance tools directly."
+                )
+                chain = balance_data.get("chain", "unknown")
+                account_address = balance_data.get("account_address") or "N/A"
+                balance_response = build_error_response(chain, str(account_address), error_msg)
+                content = validate_and_serialize_response(balance_response)
+                log_response_info(str(account_address), chain, content)
 
             # Ensure content is not empty
             if not content or not content.strip():

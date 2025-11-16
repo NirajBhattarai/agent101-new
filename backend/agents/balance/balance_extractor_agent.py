@@ -121,6 +121,12 @@ from .tools import (
     get_popular_tokens,
 )
 
+# Export public API
+__all__ = [
+    "balance_extraction_agent",
+    "parse_balance_response",
+]
+
 # Balance Extraction Agent - Extracts account addresses and prepares balance queries
 balance_extraction_agent = LlmAgent(
     name="BalanceExtractorAgent",
@@ -331,6 +337,7 @@ def parse_balance_response(session: Session) -> dict:
         # Step 1: Check response type and parse accordingly
         response_type = type(balance_data).__name__
         print(f"📥 Raw response type: {response_type}")
+        print(f"📥 Raw response: {balance_data}")
 
         # Step 2: Parse based on type
         if isinstance(balance_data, str):

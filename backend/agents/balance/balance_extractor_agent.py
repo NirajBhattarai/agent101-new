@@ -594,5 +594,3 @@ def _extract_complete_json(text: str) -> dict | None:
             pass
 
     return None
-
-

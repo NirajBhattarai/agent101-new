@@ -1,13 +1,14 @@
 """All chains balance tool."""
 
 import concurrent.futures
+from typing import Optional  # noqa: UP007 - ADK requires Optional[str] not str | None
 
 from .ethereum import get_balance_ethereum
 from .hedera import get_balance_hedera
 from .polygon import get_balance_polygon
 
 
-def get_balance_all_chains(account_address: str, token_address: str | None = None) -> dict:
+def get_balance_all_chains(account_address: str, token_address: Optional[str] = None) -> dict:  # noqa: UP045
     """
     Get token balance for an account across all supported chains.
     Executes chain queries in parallel for better performance.
@@ -73,7 +74,7 @@ def _validate_chain_result(result: dict, chain: str, account_address: str) -> di
 
 def _build_success_response(
     account_address: str,
-    token_address: str | None,
+    token_address: Optional[str],  # noqa: UP045
     polygon_result: dict,
     hedera_result: dict,
     ethereum_result: dict,
@@ -96,7 +97,7 @@ def _build_success_response(
     }
 
 
-def _build_error_response(account_address: str, token_address: str | None, error_msg: str) -> dict:
+def _build_error_response(account_address: str, token_address: str | None, error_msg: str) -> dict:  # noqa: UP045
     """Build error response for all chains."""
     return {
         "type": "balance_summary",

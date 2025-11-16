@@ -167,7 +167,7 @@ backend-test-uniswap:
 agent-orchestrator:
 	@echo "🚀 Starting Orchestrator Agent..."
 	@echo "   Orchestrator Agent: http://0.0.0.0:9000"
-	cd backend && uv run -m agents.orchestrator.orchestrator
+	cd backend && uv run -m agents.orchestrator
 
 agent-liquidity:
 	@echo "💧 Starting Multi-Chain Liquidity Agent..."
@@ -220,9 +220,6 @@ agents-start:
 	@$(MAKE) agents-stop >/dev/null 2>&1 || true
 	@sleep 1
 	@echo ""
-	@echo "📦 Installing dependencies..."
-	@cd backend && (uv venv || true) && uv sync --extra dev 2>&1 | grep -v '^$$' | head -20 || true
-	@echo ""
 	@echo "Starting agents in parallel (logs will appear in terminal)..."
 	@echo "Press Ctrl+C to stop all agents"
 	@echo ""
@@ -231,7 +228,7 @@ agents-start:
 # Stop all running agents (without using PID files)
 agents-stop:
 	@echo "🛑 Stopping all agents..."
-	@pkill -f "agents.orchestrator.orchestrator" 2>/dev/null && echo "  ✓ Stopped Orchestrator Agent" || echo "  ⚠ Orchestrator Agent not running"
+	@pkill -f "agents.orchestrator" 2>/dev/null && echo "  ✓ Stopped Orchestrator Agent" || echo "  ⚠ Orchestrator Agent not running"
 	@pkill -f "agents.multichain_liquidity" 2>/dev/null && echo "  ✓ Stopped Liquidity Agent" || echo "  ⚠ Liquidity Agent not running"
 	@pkill -f "agents.balance" 2>/dev/null && echo "  ✓ Stopped Balance Agent" || echo "  ⚠ Balance Agent not running"
 	@pkill -f "agents.swap" 2>/dev/null && echo "  ✓ Stopped Swap Agent" || echo "  ⚠ Swap Agent not running"
@@ -246,7 +243,7 @@ agents-stop:
 agents-status:
 	@echo "📊 Agent Status:"
 	@echo ""
-	@if pgrep -f "agents.orchestrator.orchestrator" > /dev/null; then \
+	@if pgrep -f "agents.orchestrator" > /dev/null; then \
 		echo "  ✅ Orchestrator Agent: Running (Port: 9000)"; \
 	else \
 		echo "  ❌ Orchestrator Agent: Not running"; \

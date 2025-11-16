@@ -4,7 +4,6 @@ Balance domain models.
 Pydantic models for balance-related data structures.
 """
 
-
 from pydantic import BaseModel, Field
 
 from ..constants import DEFAULT_TOTAL_USD_VALUE, RESPONSE_TYPE

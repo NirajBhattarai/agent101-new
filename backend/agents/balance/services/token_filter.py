@@ -4,7 +4,6 @@ Centralized functions for filtering balances by token symbol.
 """
 
 
-
 def filter_balances_by_token(balances: list[dict], token_symbol: str | None) -> list[dict]:
     """
     Filter balances by token symbol.

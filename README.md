@@ -151,7 +151,7 @@ make frontend-dev
 1. **Start Backend Agents**:
 ```bash
 # Terminal 1: Orchestrator
-cd backend && uv run -m agents.orchestrator.orchestrator
+cd backend && uv run -m agents.orchestrator
 
 # Terminal 2-6: Specialized Agents
 cd backend && uv run -m agents.balance

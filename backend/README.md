@@ -290,7 +290,7 @@ Each agent can be run as a module:
 
 ```bash
 # Orchestrator
-uv run -m agents.orchestrator.orchestrator
+uv run -m agents.orchestrator
 
 # Specialized Agents
 uv run -m agents.balance

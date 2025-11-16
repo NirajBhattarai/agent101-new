@@ -4,29 +4,20 @@ Orchestrator Agent Definition
 Defines the OrchestratorAgent class.
 """
 
-# Try google.genai.agents first (newer API)
-try:
-    from google.genai.agents import LlmAgent  # noqa: E402
-except ImportError:
-    try:
-        # Fallback to google.adk.agents
-        from google.adk.agents.llm_agent import LlmAgent  # noqa: E402
-    except ImportError:
-        # Final fallback
-        from google.adk.agents import LlmAgent  # noqa: E402
-
 try:
     from ag_ui_adk import ADKAgent  # noqa: E402
 except ImportError:
-    ADKAgent = None  # ADKAgent may not be available
+    ADKAgent = None  # type: ignore
 
-from .core.constants import (  # noqa: E402
+from google.adk.agents.llm_agent import LlmAgent
+
+from .core.constants import (
     AGENT_NAME,
     DEFAULT_APP_NAME,
-    DEFAULT_SESSION_TIMEOUT,
-    DEFAULT_USER_ID,
-    check_api_keys,
-    get_model_name,
+    DEFAULT_SESSION_TIMEOUT,  # noqa: E402
+    DEFAULT_USER_ID,  # noqa: E402
+    check_api_keys,  # noqa: E402
+    get_model_name,  # noqa: E402
 )
 from .core.instruction import ORCHESTRATOR_INSTRUCTION  # noqa: E402
 

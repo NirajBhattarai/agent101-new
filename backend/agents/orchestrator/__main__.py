@@ -10,7 +10,7 @@ import uvicorn
 from fastapi import FastAPI
 
 try:
-    from ag_ui_adk import ADKAgent, add_adk_fastapi_endpoint  # noqa: E402
+    from ag_ui_adk import add_adk_fastapi_endpoint  # noqa: E402
 except ImportError:
     print(
         "⚠️  Warning: ag_ui_adk not installed. Install with: uv pip install ag-ui-adk or make backend-install"

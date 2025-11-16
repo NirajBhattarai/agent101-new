@@ -57,14 +57,15 @@ export const ApprovalDialog: React.FC<ApprovalDialogProps> = ({
           <div className="bg-gray-50 rounded-lg p-3">
             <div className="text-sm text-[#57575B] mb-1">You are swapping</div>
             <div className="text-lg font-bold text-[#010507]">
-              {data.amount_in} {data.token_in_symbol} → {data.token_out_symbol}
+              {data.amount_in} {data.token_in_symbol?.toUpperCase()} →{" "}
+              {data.token_out_symbol?.toUpperCase()}
             </div>
           </div>
           <div className="bg-gray-50 rounded-lg p-3">
             <div className="text-sm text-[#57575B] mb-1">You will receive (estimated)</div>
             <div className="text-lg font-bold text-green-600">
               {swap_options?.[0]?.amount_out || transaction?.amount_out || "—"}{" "}
-              {data.token_out_symbol}
+              {data.token_out_symbol?.toUpperCase()}
             </div>
           </div>
           {transaction?.swap_fee && (

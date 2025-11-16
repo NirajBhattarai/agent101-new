@@ -31,6 +31,14 @@ dependencies = [
     # Google ADK (Agent Development Kit)
     "google-adk>=1.17.0",
     
+    # LangGraph & LangChain (for agent orchestration)
+    "langgraph>=0.3.18",
+    "langchain-google-genai>=2.0.10",
+    "langchain-core>=0.3.0",
+    "langchain-openai>=0.1.0",
+    "langchain-community>=0.3.0",
+    "duckduckgo-search>=6.0.0",
+    
     # Web Framework
     "fastapi>=0.109.0",
     "uvicorn[standard]>=0.27.0",

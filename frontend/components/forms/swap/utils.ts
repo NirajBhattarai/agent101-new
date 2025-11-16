@@ -27,10 +27,14 @@ export interface FormData {
 
 /**
  * Check if token is available on chain
+ * Returns true for any non-empty token symbol
+ * No filtering - users can enter any token symbol they want
+ * The backend will handle token resolution and validation
  */
 export function isTokenAvailableOnChain(tokenSymbol: string, chain: string): boolean {
-  const available = chain === "hedera" ? HEDERA_TOKENS : POLYGON_TOKENS;
-  return available.some((t) => t.symbol === tokenSymbol);
+  // Allow any non-empty token symbol - no restrictions
+  // The backend swap agent will resolve the token address dynamically
+  return tokenSymbol.trim().length > 0;
 }
 
 /**
@@ -57,16 +61,12 @@ export function validateSwapForm(formData: FormData): FormErrors {
     errors.accountAddress = addressError;
   }
 
-  if (!formData.tokenInSymbol) {
-    errors.tokenInSymbol = "Please select a token to swap from";
-  } else if (formData.chain && !isTokenAvailableOnChain(formData.tokenInSymbol, formData.chain)) {
-    errors.tokenInSymbol = `${formData.tokenInSymbol} is not available on ${formData.chain}`;
+  if (!formData.tokenInSymbol || !formData.tokenInSymbol.trim()) {
+    errors.tokenInSymbol = "Please enter a token symbol to swap from";
   }
 
-  if (!formData.tokenOutSymbol) {
-    errors.tokenOutSymbol = "Please select a token to swap to";
-  } else if (formData.chain && !isTokenAvailableOnChain(formData.tokenOutSymbol, formData.chain)) {
-    errors.tokenOutSymbol = `${formData.tokenOutSymbol} is not available on ${formData.chain}`;
+  if (!formData.tokenOutSymbol || !formData.tokenOutSymbol.trim()) {
+    errors.tokenOutSymbol = "Please enter a token symbol to swap to";
   }
 
   if (

@@ -18,9 +18,9 @@ export const HighAmountWarning: React.FC<HighAmountWarningProps> = ({ data, hasT
         <div className="flex-1">
           <h4 className="text-sm font-semibold text-yellow-900 mb-1">Confirmation Required</h4>
           <p className="text-xs text-yellow-800">
-            The swap amount ({data.amount_in} {data.token_in_symbol}) exceeds the threshold of{" "}
-            {data.confirmation_threshold} {data.token_in_symbol}. Please review the options below
-            and confirm before proceeding.
+            The swap amount ({data.amount_in} {data.token_in_symbol?.toUpperCase()}) exceeds the
+            threshold of {data.confirmation_threshold} {data.token_in_symbol?.toUpperCase()}. Please
+            review the options below and confirm before proceeding.
           </p>
         </div>
       </div>

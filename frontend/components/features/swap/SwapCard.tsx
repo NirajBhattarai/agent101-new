@@ -113,7 +113,7 @@ export const SwapCard: React.FC<SwapCardProps> = ({ data, onSwapInitiate }) => {
     setSwappingState("swapping");
     setSwapError(null);
     setShowApprovalDialog(false);
-    
+
     // Don't reset approval status if user is confirming approval (clicked "Approve & Swap")
     // This allows the swap executor to know that approval was already requested
     const currentApprovalStatus = approvalStatus?.status;

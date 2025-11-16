@@ -41,8 +41,8 @@ export const TransactionStatus: React.FC<TransactionStatusProps> = ({
             </p>
             {transaction.amount_out && transaction.amount_in && (
               <p className="text-xs text-green-700">
-                You received {transaction.amount_out} {transaction.token_out_symbol} for{" "}
-                {transaction.amount_in} {transaction.token_in_symbol}.
+                You received {transaction.amount_out} {transaction.token_out_symbol?.toUpperCase()}{" "}
+                for {transaction.amount_in} {transaction.token_in_symbol?.toUpperCase()}.
               </p>
             )}
           </div>

@@ -43,7 +43,7 @@ export const SwapOptionItem: React.FC<SwapOptionItemProps> = ({
             <div>
               <span className="text-[#57575B]">Output: </span>
               <span className="font-bold text-green-600">
-                {option.amount_out} {data.token_out_symbol}
+                {option.amount_out} {data.token_out_symbol?.toUpperCase()}
               </span>
             </div>
             <div>

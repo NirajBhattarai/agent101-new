@@ -7,7 +7,7 @@ interface SwapAmountSummaryProps {
 
 export const SwapAmountSummary: React.FC<SwapAmountSummaryProps> = ({ data }) => {
   const { transaction, swap_options } = data;
-  
+
   const tokenInInfo = transaction?.discovered_tokens?.token_in;
   const tokenOutInfo = transaction?.discovered_tokens?.token_out;
 
@@ -17,7 +17,7 @@ export const SwapAmountSummary: React.FC<SwapAmountSummaryProps> = ({ data }) =>
         <div>
           <div className="text-xs text-[#57575B] mb-1">Amount In</div>
           <div className="text-2xl font-bold text-[#010507]">
-            {data.amount_in} {data.token_in_symbol}
+            {data.amount_in} {data.token_in_symbol?.toUpperCase()}
           </div>
           {tokenInInfo?.address && (
             <div className="mt-2 space-y-1">
@@ -31,7 +31,13 @@ export const SwapAmountSummary: React.FC<SwapAmountSummaryProps> = ({ data }) =>
                   rel="noopener noreferrer"
                   className="text-xs text-blue-600 hover:text-blue-800 hover:underline inline-flex items-center gap-1"
                 >
-                  View on {data.chain === "hedera" ? "HashScan" : data.chain === "polygon" ? "PolygonScan" : "Etherscan"} →
+                  View on{" "}
+                  {data.chain === "hedera"
+                    ? "HashScan"
+                    : data.chain === "polygon"
+                      ? "PolygonScan"
+                      : "Etherscan"}{" "}
+                  →
                 </a>
               )}
             </div>
@@ -41,7 +47,7 @@ export const SwapAmountSummary: React.FC<SwapAmountSummaryProps> = ({ data }) =>
           <div className="text-xs text-[#57575B] mb-1">Amount Out</div>
           <div className="text-2xl font-bold text-green-600">
             {transaction?.amount_out || swap_options?.[0]?.amount_out || "—"}{" "}
-            {data.token_out_symbol}
+            {data.token_out_symbol?.toUpperCase()}
           </div>
           {tokenOutInfo?.address && (
             <div className="mt-2 space-y-1">
@@ -55,7 +61,13 @@ export const SwapAmountSummary: React.FC<SwapAmountSummaryProps> = ({ data }) =>
                   rel="noopener noreferrer"
                   className="text-xs text-blue-600 hover:text-blue-800 hover:underline inline-flex items-center gap-1"
                 >
-                  View on {data.chain === "hedera" ? "HashScan" : data.chain === "polygon" ? "PolygonScan" : "Etherscan"} →
+                  View on{" "}
+                  {data.chain === "hedera"
+                    ? "HashScan"
+                    : data.chain === "polygon"
+                      ? "PolygonScan"
+                      : "Etherscan"}{" "}
+                  →
                 </a>
               )}
             </div>

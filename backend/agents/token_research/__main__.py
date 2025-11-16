@@ -12,6 +12,7 @@ from a2a.server.request_handlers import DefaultRequestHandler
 from a2a.server.tasks import InMemoryTaskStore
 from a2a.types import AgentCapabilities, AgentCard, AgentSkill
 
+from .agent_langgraph import TokenResearchLangGraphAgent
 from .executor import TokenResearchExecutor
 
 # Railway uses PORT env var, fallback to TOKEN_RESEARCH_AGENT_PORT or default
@@ -20,8 +21,8 @@ port = int(os.getenv("PORT", os.getenv("TOKEN_RESEARCH_AGENT_PORT", 10002)))
 skill = AgentSkill(
     id="token_research_agent",
     name="Token Research Agent",
-    description="Discovers and searches for tokens across blockchain chains (Ethereum, Polygon, Hedera) using CoinGecko API and web search",
-    tags=["defi", "token", "research", "discovery", "blockchain", "multi-chain"],
+    description="Discovers and searches for tokens across blockchain chains (Ethereum, Polygon, Hedera) using LangGraph with CoinGecko API and web search",
+    tags=["defi", "token", "research", "discovery", "blockchain", "multi-chain", "langgraph"],
     examples=[
         "Search for USDT token",
         "Find WBTC on Polygon",
@@ -33,12 +34,12 @@ skill = AgentSkill(
 
 cardUrl = os.getenv("RENDER_EXTERNAL_URL", f"http://localhost:{port}")
 public_agent_card = AgentCard(
-    name="Token Research Agent",
-    description="Agent that discovers and searches for tokens across blockchain chains using CoinGecko API and web search",
+    name="Token Research Agent (LangGraph)",
+    description="Agent that discovers and searches for tokens across blockchain chains using LangGraph with CoinGecko API and web search",
     url=cardUrl,
-    version="1.0.0",
-    defaultInputModes=["text"],
-    defaultOutputModes=["text"],
+    version="2.0.0",
+    defaultInputModes=TokenResearchLangGraphAgent.SUPPORTED_CONTENT_TYPES,
+    defaultOutputModes=TokenResearchLangGraphAgent.SUPPORTED_CONTENT_TYPES,
     capabilities=AgentCapabilities(streaming=True),
     skills=[skill],
     supportsAuthenticatedExtendedCard=False,

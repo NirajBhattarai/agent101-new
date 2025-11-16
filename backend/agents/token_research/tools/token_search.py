@@ -4,11 +4,12 @@ import os
 from typing import Optional
 
 import requests
+from langchain_community.tools import DuckDuckGoSearchRun
 
 
 def search_token_on_web(token_symbol: str) -> dict | None:
     """
-    Search for token information on the web using Google Custom Search.
+    Search for token information on the web using DuckDuckGo search via LangChain.
 
     Args:
         token_symbol: Token symbol to search for (e.g., "USDT", "WBTC")
@@ -16,38 +17,33 @@ def search_token_on_web(token_symbol: str) -> dict | None:
     Returns:
         Dictionary with token information including search results, or None if not found
     """
-    api_key = os.getenv("GOOGLE_API_KEY")
-    search_engine_id = os.getenv("GOOGLE_SEARCH_ENGINE_ID")
-
-    if not api_key or not search_engine_id:
-        print("⚠️  Google API key or Search Engine ID not configured. Skipping web search.")
-        return None
-
     try:
         query = f"{token_symbol} token contract address ethereum polygon"
-        url = "https://www.googleapis.com/customsearch/v1"
-        params = {
-            "key": api_key,
-            "cx": search_engine_id,
-            "q": query,
-            "num": 5,
-        }
+        search_tool = DuckDuckGoSearchRun()
+        search_result = search_tool.run(query)
 
-        response = requests.get(url, params=params, timeout=10)
-        response.raise_for_status()
-        data = response.json()
+        if not search_result:
+            return None
 
-        # Extract relevant information from search results
+        # Format the search result
+        # DuckDuckGo returns a string, so we'll parse it into structured results
         results = []
-        for item in data.get("items", [])[:3]:
-            snippet = item.get("snippet", "")
-            title = item.get("title", "")
-            results.append({"title": title, "snippet": snippet})
+        if isinstance(search_result, str):
+            # Split by lines or paragraphs and create result entries
+            lines = search_result.split("\n")[:5]  # Limit to 5 results
+            for i, line in enumerate(lines):
+                if line.strip():
+                    results.append(
+                        {
+                            "title": f"Result {i + 1}",
+                            "snippet": line.strip(),
+                        }
+                    )
 
         return {
             "token_symbol": token_symbol.upper(),
-            "search_results": results,
-            "source": "google_search",
+            "search_results": results if results else [{"title": "Search Result", "snippet": search_result[:500]}],
+            "source": "duckduckgo_search",
         }
     except Exception as e:
         print(f"❌ Error searching for token {token_symbol}: {e}")
@@ -67,12 +63,9 @@ def search_token_contract_address(token_symbol: str, chain: str) -> dict | None:
     """
     api_key = os.getenv("COINGECKO_API_KEY")
 
-    if not api_key:
-        print("⚠️  CoinGecko API key not configured.")
-        return None
-
     try:
         # First, search for the token ID
+        # CoinGecko free tier works without API key but has rate limits
         search_url = "https://api.coingecko.com/api/v3/search"
         search_params = {"query": token_symbol}
         search_headers = {}
@@ -85,6 +78,12 @@ def search_token_contract_address(token_symbol: str, chain: str) -> dict | None:
         search_response = requests.get(
             search_url, params=search_params, headers=search_headers, timeout=10
         )
+        
+        # Handle rate limiting for free tier
+        if search_response.status_code == 429:
+            print("⚠️  CoinGecko rate limit reached. Consider using COINGECKO_API_KEY for higher limits.")
+            return None
+            
         search_response.raise_for_status()
         search_data = search_response.json()
 
@@ -117,6 +116,12 @@ def search_token_contract_address(token_symbol: str, chain: str) -> dict | None:
                 coin_headers["x-cg-pro-api-key"] = api_key
 
         coin_response = requests.get(coin_url, params=coin_params, headers=coin_headers, timeout=10)
+        
+        # Handle rate limiting for free tier
+        if coin_response.status_code == 429:
+            print("⚠️  CoinGecko rate limit reached. Consider using COINGECKO_API_KEY for higher limits.")
+            return None
+            
         coin_response.raise_for_status()
         coin_data = coin_response.json()
 

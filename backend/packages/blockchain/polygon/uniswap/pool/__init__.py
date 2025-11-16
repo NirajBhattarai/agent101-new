@@ -6,7 +6,6 @@ from packages.blockchain.dex.base import FEE_TIERS
 from packages.blockchain.polygon.uniswap.constants import (
     NETWORKS,
     UNISWAP_V3_FACTORY_MAINNET,
-    UNISWAP_V3_FACTORY_MUMBAI,
 )
 from packages.blockchain.polygon.uniswap.pool.factory import (
     get_factory_address,
@@ -25,5 +24,4 @@ __all__ = [
     "FEE_TIERS",
     "NETWORKS",
     "UNISWAP_V3_FACTORY_MAINNET",
-    "UNISWAP_V3_FACTORY_MUMBAI",
 ]

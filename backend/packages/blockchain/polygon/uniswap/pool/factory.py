@@ -10,7 +10,7 @@ def get_factory_address(network: str = "mainnet") -> str:
     Get Uniswap V3 factory address for the specified network.
 
     Args:
-        network: Network type - "mainnet" or "mumbai" (default: "mainnet")
+        network: Network type - "mainnet" (default: "mainnet")
 
     Returns:
         Factory contract address

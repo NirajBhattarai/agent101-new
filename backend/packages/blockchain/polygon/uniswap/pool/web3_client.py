@@ -16,7 +16,7 @@ class UniswapWeb3Client(BaseUniswapV3Client):
 
         Args:
             rpc_url: RPC endpoint URL
-            network: Network type - "mainnet" or "mumbai"
+            network: Network type - "mainnet"
         """
         network = network.lower()
         if network not in NETWORKS:

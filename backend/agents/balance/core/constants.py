@@ -13,8 +13,6 @@ DEFAULT_USER_ID = "balance_agent"
 DEFAULT_SESSION_ID = "default_session"
 
 # Configuration
-POPULAR_TOKENS_LIMIT = int(os.getenv("POPULAR_TOKENS_LIMIT", "10"))  # Configurable limit
-WEB_SEARCH_TIMEOUT = int(os.getenv("WEB_SEARCH_TIMEOUT", "10"))  # Timeout in seconds
 
 # Agent configuration
 AGENT_NAME = "balance_agent"

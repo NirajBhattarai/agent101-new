@@ -52,4 +52,3 @@ def resolve_token_for_liquidity(token_symbol: str, chain: str) -> dict[str, Any]
             "status": "error",
             "error": str(e),
         }
-

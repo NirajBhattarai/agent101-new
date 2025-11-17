@@ -74,13 +74,15 @@ class LiquidityExecutor(AgentExecutor):
         """Execute the liquidity agent request."""
         query = context.get_user_input()
         session_id = _get_session_id(context)
-        
+
         print("=" * 80)
         print("💧 LIQUIDITY EXECUTOR - INCOMING REQUEST")
         print("=" * 80)
         print(f"   Query: {query}")
         print(f"   Session ID: {session_id}")
-        print(f"   Timestamp: {context.get_timestamp() if hasattr(context, 'get_timestamp') else 'N/A'}")
+        print(
+            f"   Timestamp: {context.get_timestamp() if hasattr(context, 'get_timestamp') else 'N/A'}"
+        )
         print()
 
         try:
@@ -88,9 +90,11 @@ class LiquidityExecutor(AgentExecutor):
 
             # Run the orchestrator agent (single agent that decides chains and calls tools)
             print("🎯 Running Liquidity Orchestrator Agent...")
-            print(f"   Agent: LiquidityOrchestratorAgent")
-            print(f"   Purpose: Decide which chains to query, resolve tokens, call liquidity tools, return JSON")
-            
+            print("   Agent: LiquidityOrchestratorAgent")
+            print(
+                "   Purpose: Decide which chains to query, resolve tokens, call liquidity tools, return JSON"
+            )
+
             orchestrator_runner = InMemoryRunner(
                 agent=liquidity_orchestrator_agent,
                 app_name=app_name,
@@ -110,14 +114,14 @@ class LiquidityExecutor(AgentExecutor):
                     user_id="user",
                     session_id=session_id,
                 )
-                print(f"   ✅ Session created successfully")
+                print("   ✅ Session created successfully")
             else:
-                print(f"   ✅ Session found (existing)")
+                print("   ✅ Session found (existing)")
 
             print(f"   Executing orchestrator with query: {query}")
             print(f"   Query length: {len(query)} characters")
             print(f"   Query preview: {query[:200]}...")
-            
+
             # Capture agent's JSON response from events and session state
             response_text = ""
             async for event in orchestrator_runner.run_async(
@@ -144,7 +148,7 @@ class LiquidityExecutor(AgentExecutor):
                 user_id="user",
                 session_id=session_id,
             )
-            
+
             # Try to get response from session state (output_key)
             liquidity_data = None
             if session and session.state.get("liquidity_response"):
@@ -152,14 +156,14 @@ class LiquidityExecutor(AgentExecutor):
                 if isinstance(stored_response, dict):
                     # If it's already a dict, use it directly
                     liquidity_data = stored_response
-                    print(f"   ✅ Found response in session state (dict)")
+                    print("   ✅ Found response in session state (dict)")
                 elif isinstance(stored_response, str):
                     response_text = stored_response
-                    print(f"   ✅ Found response in session state (string)")
+                    print("   ✅ Found response in session state (string)")
                 else:
                     response_text = str(stored_response)
-                    print(f"   ✅ Found response in session state (converted to string)")
-            
+                    print("   ✅ Found response in session state (converted to string)")
+
             # Also check session messages for the last agent message
             if not response_text and session and hasattr(session, "messages") and session.messages:
                 # Get the last message from the agent
@@ -178,8 +182,10 @@ class LiquidityExecutor(AgentExecutor):
                                 if response_text:
                                     break
 
-            print(f"   ✅ Orchestrator execution completed")
-            print(f"   Response text length: {len(response_text) if response_text else 0} characters")
+            print("   ✅ Orchestrator execution completed")
+            print(
+                f"   Response text length: {len(response_text) if response_text else 0} characters"
+            )
             if response_text:
                 print(f"   Response text preview: {response_text[:200]}...")
 
@@ -187,14 +193,14 @@ class LiquidityExecutor(AgentExecutor):
             print()
             print("📦 Parsing JSON Response...")
             liquidity_data = None
-            
+
             # First, check if we already have parsed data from session state
             if session and session.state.get("liquidity_response"):
                 stored_response = session.state["liquidity_response"]
                 if isinstance(stored_response, dict):
                     liquidity_data = stored_response
-                    print(f"   ✅ Using response from session state (dict)")
-            
+                    print("   ✅ Using response from session state (dict)")
+
             # If not, try to parse from response_text
             if not liquidity_data and response_text and response_text.strip():
                 # Remove markdown code blocks if present
@@ -206,12 +212,14 @@ class LiquidityExecutor(AgentExecutor):
                 if cleaned_text.endswith("```"):
                     cleaned_text = cleaned_text[:-3]
                 cleaned_text = cleaned_text.strip()
-                
+
                 try:
                     # Parse as JSON
                     liquidity_data = json.loads(cleaned_text)
-                    print(f"   ✅ Successfully parsed JSON response from text")
-                    print(f"   Response keys: {list(liquidity_data.keys()) if isinstance(liquidity_data, dict) else 'N/A'}")
+                    print("   ✅ Successfully parsed JSON response from text")
+                    print(
+                        f"   Response keys: {list(liquidity_data.keys()) if isinstance(liquidity_data, dict) else 'N/A'}"
+                    )
                     if isinstance(liquidity_data, dict):
                         print(f"   Chain: {liquidity_data.get('chain', 'N/A')}")
                         print(f"   Results count: {len(liquidity_data.get('results', []))}")
@@ -227,11 +235,13 @@ class LiquidityExecutor(AgentExecutor):
                         "results": [],
                         "error": f"Invalid JSON response from agent: {str(e)}",
                     }
-            
+
             # If still no data, return error
             if not liquidity_data:
-                print(f"   ⚠️ Warning: Orchestrator returned empty output")
-                print(f"   Session state keys: {list(session.state.keys()) if session else 'No session'}")
+                print("   ⚠️ Warning: Orchestrator returned empty output")
+                print(
+                    f"   Session state keys: {list(session.state.keys()) if session else 'No session'}"
+                )
                 liquidity_data = {
                     "type": RESPONSE_TYPE,
                     "chain": "unknown",
@@ -249,15 +259,15 @@ class LiquidityExecutor(AgentExecutor):
                 if "type" not in liquidity_data:
                     liquidity_data["type"] = RESPONSE_TYPE
                 content = json.dumps(liquidity_data, indent=2)
-                print(f"   ✅ Formatted as JSON from dict")
+                print("   ✅ Formatted as JSON from dict")
             else:
                 # Convert to JSON if it's already a string
                 if isinstance(liquidity_data, str):
                     content = liquidity_data
-                    print(f"   ✅ Using string response as-is")
+                    print("   ✅ Using string response as-is")
                 else:
                     content = json.dumps(liquidity_data, indent=2)
-                    print(f"   ✅ Converted to JSON string")
+                    print("   ✅ Converted to JSON string")
 
             # Ensure content is not empty
             if not content or not content.strip():
@@ -268,7 +278,7 @@ class LiquidityExecutor(AgentExecutor):
             print(f"   Content length: {len(content)} characters")
             try:
                 validated_content = validate_response_content(content)
-                print(f"   ✅ Content validated")
+                print("   ✅ Content validated")
             except ValueError as validation_error:
                 print(f"   ⚠️ Warning: Response validation failed: {validation_error}")
                 print(f"   Content preview: {content[:200]}")

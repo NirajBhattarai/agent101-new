@@ -6,6 +6,45 @@ interface TransactionInfoProps {
   transaction: SwapTransaction;
 }
 
+/**
+ * Get explorer URL for a token address based on chain
+ */
+const getTokenExplorerUrl = (chain: string, tokenAddress: string): string => {
+  const chainLower = chain.toLowerCase();
+  
+  if (chainLower.includes("hedera")) {
+    const network = chainLower.includes("testnet") ? "testnet" : "mainnet";
+    // For Hedera, token addresses are in format 0.0.xxxxx
+    if (tokenAddress.includes(".")) {
+      return `https://hashscan.io/${network}/token/${tokenAddress}`;
+    }
+    // For EVM tokens on Hedera, use contract address
+    return `https://hashscan.io/${network}/contract/${tokenAddress}`;
+  } else if (chainLower.includes("polygon")) {
+    return `https://polygonscan.com/token/${tokenAddress}`;
+  } else if (chainLower.includes("ethereum") || chainLower.includes("eth")) {
+    return `https://etherscan.io/token/${tokenAddress}`;
+  }
+  
+  // Default fallback
+  return `https://etherscan.io/token/${tokenAddress}`;
+};
+
+/**
+ * Get explorer name based on chain
+ */
+const getExplorerName = (chain: string): string => {
+  const chainLower = chain.toLowerCase();
+  if (chainLower.includes("hedera")) {
+    return "HashScan";
+  } else if (chainLower.includes("polygon")) {
+    return "PolygonScan";
+  } else if (chainLower.includes("ethereum") || chainLower.includes("eth")) {
+    return "Etherscan";
+  }
+  return "Explorer";
+};
+
 export const TransactionInfo: React.FC<TransactionInfoProps> = ({ transaction }) => {
   return (
     <div className="space-y-3">
@@ -52,11 +91,21 @@ export const TransactionInfo: React.FC<TransactionInfoProps> = ({ transaction })
       <div className="bg-white/80 backdrop-blur-sm rounded-lg p-4 shadow-elevation-sm border border-[#E9E9EF]">
         <div className="flex items-center justify-between mb-1">
           <div className="text-xs text-[#57575B]">Token In Address</div>
-          {transaction.discovered_tokens?.token_in && (
-            <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full font-semibold">
-              🔍 Discovered
-            </span>
-          )}
+          <div className="flex items-center gap-2">
+            {transaction.discovered_tokens?.token_in && (
+              <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full font-semibold">
+                🔍 Discovered
+              </span>
+            )}
+            <a
+              href={getTokenExplorerUrl(transaction.chain, transaction.token_in_address)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-blue-600 hover:text-blue-800 hover:underline inline-flex items-center gap-1 font-semibold"
+            >
+              Scan on {getExplorerName(transaction.chain)} →
+            </a>
+          </div>
         </div>
         <div className="text-sm font-mono text-[#010507] break-all">
           {transaction.token_in_address}
@@ -71,11 +120,21 @@ export const TransactionInfo: React.FC<TransactionInfoProps> = ({ transaction })
       <div className="bg-white/80 backdrop-blur-sm rounded-lg p-4 shadow-elevation-sm border border-[#E9E9EF]">
         <div className="flex items-center justify-between mb-1">
           <div className="text-xs text-[#57575B]">Token Out Address</div>
-          {transaction.discovered_tokens?.token_out && (
-            <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full font-semibold">
-              🔍 Discovered
-            </span>
-          )}
+          <div className="flex items-center gap-2">
+            {transaction.discovered_tokens?.token_out && (
+              <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full font-semibold">
+                🔍 Discovered
+              </span>
+            )}
+            <a
+              href={getTokenExplorerUrl(transaction.chain, transaction.token_out_address)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-blue-600 hover:text-blue-800 hover:underline inline-flex items-center gap-1 font-semibold"
+            >
+              Scan on {getExplorerName(transaction.chain)} →
+            </a>
+          </div>
         </div>
         <div className="text-sm font-mono text-[#010507] break-all">
           {transaction.token_out_address}

@@ -245,6 +245,15 @@ export default function ChatPage() {
                   <span className="px-4 py-2 rounded-full bg-gradient-to-r from-green-500/10 to-teal-500/10 border border-green-300/30 text-sm font-semibold text-green-700">
                     💱 Swap Agent
                   </span>
+                  <span className="px-4 py-2 rounded-full bg-gradient-to-r from-pink-500/10 to-rose-500/10 border border-pink-300/30 text-sm font-semibold text-pink-700">
+                    📈 Sentiment Agent
+                  </span>
+                  <span className="px-4 py-2 rounded-full bg-gradient-to-r from-amber-500/10 to-yellow-500/10 border border-amber-300/30 text-sm font-semibold text-amber-700">
+                    💹 Trading Agent
+                  </span>
+                  <span className="px-4 py-2 rounded-full bg-gradient-to-r from-blue-500/10 to-indigo-500/10 border border-blue-300/30 text-sm font-semibold text-indigo-700">
+                    🔍 Token Research
+                  </span>
                 </div>
               </div>
 

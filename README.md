@@ -60,13 +60,41 @@ Agent101 follows a **multi-agent orchestration architecture** with a clear separ
 - **Features**: Chat, Swap, Balance, Liquidity, Bridge, Payment Facilitator
 
 #### 2. **Backend Agents** (`backend/agents/`)
-- **Orchestrator Agent**: Central coordinator using Google ADK + AG-UI Protocol
+- **Orchestrator Agent** (Port 9000): Central coordinator using Google ADK + AG-UI Protocol
+  - Routes queries to specialized agents via A2A Protocol
+  - Aggregates responses from multiple agents
+  - Handles agent coordination and workflow management
+
 - **Specialized Agents**: Each agent handles a specific domain
-  - **Balance Agent**: Multi-chain balance queries
-  - **Multi-Chain Liquidity Agent**: DEX liquidity aggregation
-  - **Swap Agent**: Token swap execution
-  - **Sentiment Agent**: Cryptocurrency sentiment analysis
-  - **Trading Agent**: ML-powered trading recommendations
+  - **Balance Agent** (Port 9997): Multi-chain balance queries
+    - Uses SequentialAgent with token extraction and balance extraction sub-agents
+    - Supports Hedera, Ethereum, and Polygon
+    - Returns structured balance data with USD valuations
+  
+  - **LiquidityFinder** (Port 9998): Multi-chain liquidity analysis
+    - Single orchestrator agent that handles token resolution internally
+    - Queries Uniswap V3 pools (Ethereum/Polygon) and SaucerSwap pools (Hedera)
+    - Supports multiple fee tiers (500, 3000, 10000 basis points)
+    - Returns comprehensive liquidity data including pool addresses, TVL, and tick information
+  
+  - **Swap Agent** (Port 9999): Token swap execution
+    - Intelligent swap routing across multiple DEXes
+    - Automatic rate comparison and slippage protection
+    - Supports native tokens and ERC-20 tokens
+  
+  - **Sentiment Agent** (Port 10000): Cryptocurrency sentiment analysis
+    - Powered by Santiment API
+    - Tracks social volume, trending topics, and community sentiment
+  
+  - **Trading Agent** (Port 10001): ML-powered trading recommendations
+    - AI-powered trading signals for BTC and ETH
+    - Machine learning predictions and technical indicators
+    - Risk-adjusted recommendations
+  
+  - **Token Research Agent**: Comprehensive token discovery
+    - Finds contract addresses across multiple chains
+    - Verifies token metadata
+    - Explores cross-chain availability
 
 #### 3. **Blockchain Packages** (`backend/packages/blockchain/`)
 - **Shared Libraries**: Reusable blockchain integration code
@@ -171,34 +199,167 @@ npm run dev
 
 ```
 agent101-new/
-├── frontend/                 # Next.js frontend application
-│   ├── app/                  # Next.js app router
-│   │   ├── api/              # API routes (orchestrator, facilitator)
-│   │   ├── chat/             # Chat interface page
-│   │   ├── swap/             # Swap feature page
-│   │   └── payment/          # Payment facilitator page
-│   ├── components/           # React components
-│   │   ├── chat/             # Chat UI components
-│   │   ├── features/         # Feature-specific components
-│   │   ├── forms/            # Form components
-│   │   └── shared/           # Shared components
-│   └── scripts/              # Utility scripts
+├── frontend/                          # Next.js frontend application
+│   ├── app/                           # Next.js app router
+│   │   ├── api/                       # API routes
+│   │   │   ├── copilotkit/            # CopilotKit integration
+│   │   │   ├── facilitator/          # Payment facilitator (x402 Hedera)
+│   │   │   └── orchestrator/          # Orchestrator proxy
+│   │   ├── chat/                      # Chat interface page
+│   │   ├── swap/                      # Swap feature page
+│   │   ├── payment/                   # Payment facilitator page
+│   │   ├── layout.tsx                 # Root layout
+│   │   └── page.tsx                   # Landing page
+│   ├── components/                    # React components
+│   │   ├── chat/                      # Chat UI components
+│   │   │   ├── a2a/                   # A2A protocol visualizers
+│   │   │   └── DeFiChat.tsx           # Main chat component
+│   │   ├── features/                  # Feature-specific components
+│   │   │   ├── balance/                # Balance display card
+│   │   │   ├── bridge/                 # Bridge transaction card
+│   │   │   ├── liquidity/              # Liquidity pool card
+│   │   │   ├── market_insights/        # Market insights card
+│   │   │   ├── pool_calculator/         # Pool calculator card
+│   │   │   ├── swap/                   # Swap transaction card
+│   │   │   │   └── components/         # Swap sub-components
+│   │   │   ├── swap_router/            # Swap router card
+│   │   │   └── token-research/         # Token research card
+│   │   ├── forms/                      # Form components
+│   │   │   ├── balance/                # Balance query form
+│   │   │   ├── bridge/                 # Bridge transaction form
+│   │   │   ├── liquidity/              # Liquidity query form
+│   │   │   ├── payment/                # Payment facilitator form
+│   │   │   ├── shared/                 # Shared form utilities
+│   │   │   └── swap/                   # Swap requirements form
+│   │   └── shared/                     # Shared components
+│   │       ├── Logo.tsx                # Logo component
+│   │       └── WalletConnect.tsx       # Wallet connection
+│   ├── lib/                            # Library code
+│   │   ├── config/                     # App configuration
+│   │   ├── constants/                  # App constants (chains, tokens, DEXes)
+│   │   ├── features/                   # Feature implementations
+│   │   │   ├── bridge/                 # Bridge logic
+│   │   │   └── swap/                   # Swap logic
+│   │   ├── shared/                     # Shared utilities
+│   │   │   ├── blockchain/             # Blockchain utilities
+│   │   │   ├── contracts/              # Contract ABIs
+│   │   │   └── crypto/                 # Crypto utilities
+│   │   └── store/                      # Redux store
+│   │       └── slices/                 # Redux slices
+│   ├── types/                          # TypeScript type definitions
+│   ├── utils/                          # Utility functions
+│   │   └── liquidityTransformer.ts     # Liquidity data transformer
+│   └── scripts/                        # Utility scripts
 │
-├── backend/                  # Python backend
-│   ├── agents/               # Agent implementations
-│   │   ├── orchestrator/     # Orchestrator agent
-│   │   ├── balance/          # Balance agent
-│   │   ├── multichain_liquidity/  # Liquidity agent
-│   │   ├── swap/             # Swap agent
-│   │   ├── sentiment/        # Sentiment agent
-│   │   └── trading/          # Trading agent
-│   └── packages/             # Shared packages
-│       └── blockchain/       # Blockchain integrations
-│           ├── ethereum/      # Ethereum integration
-│           ├── polygon/      # Polygon integration
-│           └── hedera/       # Hedera integration
+├── backend/                            # Python backend
+│   ├── agents/                         # Agent implementations
+│   │   ├── orchestrator/              # Orchestrator agent (Port 9000)
+│   │   │   ├── agent.py                # Main orchestrator agent
+│   │   │   └── core/                   # Core orchestrator logic
+│   │   │       ├── instruction.py      # Agent instructions
+│   │   │       └── logger.py           # Logging utilities
+│   │   ├── balance/                    # Balance agent (Port 9997)
+│   │   │   ├── agent.py                # Sequential agent definition
+│   │   │   ├── balance_extractor_agent.py  # Balance extraction agent
+│   │   │   ├── token_extractor_agent.py    # Token extraction agent
+│   │   │   ├── executor.py             # A2A executor
+│   │   │   ├── core/                   # Core balance logic
+│   │   │   │   ├── constants.py       # Balance constants
+│   │   │   │   ├── models/            # Pydantic models
+│   │   │   │   └── response_validator.py
+│   │   │   ├── services/               # Service layer
+│   │   │   │   ├── response_builder.py
+│   │   │   │   └── token_filter.py
+│   │   │   └── tools/                  # Balance tools
+│   │   │       ├── hedera.py           # Hedera balance tool
+│   │   │       ├── ethereum.py         # Ethereum balance tool
+│   │   │       ├── polygon.py          # Polygon balance tool
+│   │   │       └── all_chains.py       # Multi-chain balance tool
+│   │   ├── multichain_liquidity/       # LiquidityFinder agent (Port 9998)
+│   │   │   ├── agents/                 # Agent definitions
+│   │   │   │   └── orchestrator.py     # Single orchestrator agent
+│   │   │   ├── executor.py             # A2A executor
+│   │   │   ├── core/                   # Core liquidity logic
+│   │   │   │   └── constants.py
+│   │   │   ├── services/               # Service layer
+│   │   │   └── tools/                  # Liquidity tools
+│   │   │       ├── hedera.py           # Hedera liquidity tool
+│   │   │       ├── ethereum.py         # Ethereum liquidity tool
+│   │   │       ├── polygon.py          # Polygon liquidity tool
+│   │   │       └── token_resolver.py   # Token resolution tool
+│   │   ├── swap/                       # Swap agent (Port 9999)
+│   │   │   ├── agent.py                # Swap agent definition
+│   │   │   ├── executor.py             # A2A executor
+│   │   │   ├── core/                   # Core swap logic
+│   │   │   │   ├── constants.py
+│   │   │   │   ├── models/             # Swap models
+│   │   │   │   └── response_validator.py
+│   │   │   ├── services/               # Service layer
+│   │   │   │   ├── query_parser.py
+│   │   │   │   ├── response_builder.py
+│   │   │   │   ├── token_resolver.py
+│   │   │   │   └── explorer_utils.py
+│   │   │   └── tools/                  # Swap tools
+│   │   │       ├── hedera.py           # Hedera swap tool
+│   │   │       ├── ethereum.py         # Ethereum swap tool
+│   │   │       └── polygon.py          # Polygon swap tool
+│   │   ├── sentiment/                  # Sentiment agent (Port 10000)
+│   │   │   ├── agent.py                # Sentiment agent definition
+│   │   │   ├── executor.py             # A2A executor
+│   │   │   ├── core/                   # Core sentiment logic
+│   │   │   ├── services/               # Service layer
+│   │   │   └── tools/                  # Sentiment tools
+│   │   │       └── santiment.py        # Santiment API integration
+│   │   ├── trading/                    # Trading agent (Port 10001)
+│   │   │   ├── agent.py                # Trading agent definition
+│   │   │   ├── executor.py             # A2A executor
+│   │   │   ├── core/                   # Core trading logic
+│   │   │   ├── services/               # Service layer
+│   │   │   └── tools/                  # Trading tools
+│   │   │       ├── price_data.py       # Price data fetching
+│   │   │       ├── technical_analysis.py
+│   │   │       ├── ml_predictor.py     # ML predictions
+│   │   │       └── trading_strategy.py
+│   │   └── token_research/             # Token Research agent
+│   │       ├── agent.py                # ADK agent definition
+│   │       ├── agent_langgraph.py      # LangGraph agent (alternative)
+│   │       ├── executor.py             # A2A executor
+│   │       ├── core/                   # Core token research logic
+│   │       │   ├── models/             # Token research models
+│   │       │   └── response_validator.py
+│   │       ├── services/               # Service layer
+│   │       └── tools/                  # Token research tools
+│   │           ├── token_search.py     # Token search
+│   │           ├── token_fetcher.py    # Token data fetching
+│   │           └── token_discovery.py  # Token discovery
+│   └── packages/                       # Shared packages
+│       └── blockchain/                 # Blockchain integrations
+│           ├── dex/                    # DEX abstractions
+│           │   ├── abis/                # Contract ABIs
+│           │   ├── base/                # Base DEX classes
+│           │   └── utils/              # DEX utilities
+│           ├── ethereum/                # Ethereum integration
+│           │   ├── balance/            # Balance client
+│           │   ├── uniswap/            # Uniswap V3 integration
+│           │   │   ├── pool/           # Pool operations
+│           │   │   └── factory.py      # Pool factory
+│           │   └── constants.py
+│           ├── polygon/                # Polygon integration
+│           │   ├── balance/            # Balance client
+│           │   ├── uniswap/            # Uniswap V3 integration
+│           │   └── constants.py
+│           ├── hedera/                 # Hedera integration
+│           │   ├── balance/            # Balance client
+│           │   ├── saucerswap/         # SaucerSwap integration
+│           │   │   ├── pool/           # Pool operations
+│           │   │   └── factory.py      # Pool factory
+│           │   ├── client.py           # Hedera client
+│           │   ├── transactions.py    # Transaction utilities
+│           │   └── constants.py
+│           ├── token_discovery.py      # Token discovery utilities
+│           └── token_updater.py       # Token metadata updater
 │
-└── Makefile                  # Development commands
+└── Makefile                            # Development commands
 ```
 
 ## 🔄 Agent Workflow
@@ -263,10 +424,11 @@ make backend-test-coverage           # With coverage
 
 ### Specialized Agents (A2A Protocol)
 - **Balance Agent**: `http://localhost:9997/`
-- **Liquidity Agent**: `http://localhost:9998/`
+- **LiquidityFinder**: `http://localhost:9998/`
 - **Swap Agent**: `http://localhost:9999/`
 - **Sentiment Agent**: `http://localhost:10000/`
 - **Trading Agent**: `http://localhost:10001/`
+- **Token Research Agent**: Available via orchestrator
 
 ### Frontend API Routes
 - **Orchestrator Proxy**: `/api/orchestrator`

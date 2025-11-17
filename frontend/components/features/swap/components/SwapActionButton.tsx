@@ -26,6 +26,18 @@ export const SwapActionButton: React.FC<SwapActionButtonProps> = ({
     onShowApprovalDialog();
   };
 
+  // For Polygon swaps, update Uniswap V2 to Uniswap V3
+  const getDexDisplayName = (): string => {
+    const chainLower = transaction.chain?.toLowerCase() || "";
+    const dexName = transaction.dex_name || "";
+    
+    if (chainLower.includes("polygon") && dexName.toLowerCase().includes("uniswap v2")) {
+      return dexName.replace(/Uniswap V2/gi, "Uniswap V3");
+    }
+    
+    return dexName;
+  };
+
   return (
     <div className="mt-4 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
       <button
@@ -47,7 +59,7 @@ export const SwapActionButton: React.FC<SwapActionButtonProps> = ({
         ) : !isConnected ? (
           "Connect Wallet to Swap"
         ) : (
-          `Execute Swap with ${transaction.dex_name}`
+          `Execute Swap with ${getDexDisplayName()}`
         )}
       </button>
     </div>

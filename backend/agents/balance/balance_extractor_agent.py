@@ -260,6 +260,8 @@ balance_extraction_agent = LlmAgent(
         "CRITICAL RULES:\n"
         "- ALWAYS use the appropriate balance tool when you have a valid account address\n"
         "- Tools return complete balance objects with native and ERC20 token balances\n"
+        "- ALWAYS return valid JSON - the tool's response object is already in JSON format\n"
+        "- Your output MUST be valid JSON that can be parsed by json.loads()\n"
         "- Return the tool's response object directly (it's already in JSON format)\n"
         "- If address is missing or invalid, return the error JSON structure above\n"
         "- Validate all addresses are in correct format before calling tools\n"
@@ -267,7 +269,8 @@ balance_extraction_agent = LlmAgent(
         "- Do NOT extract token addresses - that's done by token extractor agent\n"
         "- Focus on extracting account addresses and then fetching balances with tools\n"
         "- For 'all' chains, use get_balance_all_chains tool\n"
-        "- For specific chains, use the chain-specific tool (get_balance_hedera, get_balance_ethereum, get_balance_polygon)"
+        "- For specific chains, use the chain-specific tool (get_balance_hedera, get_balance_ethereum, get_balance_polygon)\n"
+        "- NEVER return text explanations - only return JSON objects"
     ),
     output_key="balance_data",
     tools=[

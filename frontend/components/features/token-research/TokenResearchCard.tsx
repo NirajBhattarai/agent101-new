@@ -34,10 +34,7 @@ export const TokenResearchCard: React.FC<TokenResearchCardProps> = ({ data }) =>
         {search_result.tokens.length > 0 ? (
           <div className="space-y-4">
             {search_result.tokens.map((token: TokenInfo, index: number) => (
-              <div
-                key={index}
-                className="bg-gray-50 rounded-lg p-4 border border-gray-200"
-              >
+              <div key={index} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
                 <div className="flex items-center justify-between mb-2">
                   <div>
                     <h4 className="font-semibold text-[#010507]">
@@ -103,10 +100,7 @@ export const TokenResearchCard: React.FC<TokenResearchCardProps> = ({ data }) =>
                 </h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {tokens.map((token: TokenInfo, index: number) => (
-                    <div
-                      key={index}
-                      className="bg-white rounded p-3 border border-gray-100"
-                    >
+                    <div key={index} className="bg-white rounded p-3 border border-gray-100">
                       <div className="flex items-center justify-between mb-1">
                         <span className="font-semibold text-sm">{token.symbol}</span>
                         {token.market_cap_rank && (
@@ -115,7 +109,10 @@ export const TokenResearchCard: React.FC<TokenResearchCardProps> = ({ data }) =>
                       </div>
                       <p className="text-xs text-gray-600 mb-1">{token.name}</p>
                       {token.address && (
-                        <p className="text-xs font-mono text-gray-500 truncate" title={token.address}>
+                        <p
+                          className="text-xs font-mono text-gray-500 truncate"
+                          title={token.address}
+                        >
                           {token.address}
                         </p>
                       )}
@@ -137,4 +134,3 @@ export const TokenResearchCard: React.FC<TokenResearchCardProps> = ({ data }) =>
     </div>
   );
 };
-

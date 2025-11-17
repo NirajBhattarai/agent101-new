@@ -43,7 +43,6 @@ export const LiquidityRequirementsForm: React.FC<LiquidityRequirementsFormProps>
     }
   }, [parsedArgs?.chain, parsedArgs?.tokenPair]);
 
-
   const validateForm = () => {
     const newErrors = validateLiquidityForm({ tokenPair });
     setErrors(newErrors);
@@ -92,7 +91,9 @@ export const LiquidityRequirementsForm: React.FC<LiquidityRequirementsFormProps>
       <div className="space-y-3">
         <div>
           <label className="block text-xs font-medium text-[#010507] mb-1.5">Chain *</label>
-          <div className={`grid gap-2 ${CHAIN_OPTIONS.length === 4 ? "grid-cols-2" : CHAIN_OPTIONS.length === 3 ? "grid-cols-3" : "grid-cols-2"}`}>
+          <div
+            className={`grid gap-2 ${CHAIN_OPTIONS.length === 4 ? "grid-cols-2" : CHAIN_OPTIONS.length === 3 ? "grid-cols-3" : "grid-cols-2"}`}
+          >
             {CHAIN_OPTIONS.map((option) => (
               <button
                 key={option.value}

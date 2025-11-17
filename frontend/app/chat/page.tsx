@@ -205,16 +205,16 @@ export default function ChatPage() {
               <p className="text-xs text-[#838389] mt-1">Orchestrator-mediated A2A Protocol</p>
             </div>
             <div className="flex-1 overflow-hidden">
-            <DeFiChat
-              onTokenResearchUpdate={setTokenResearchData}
-              onBalanceUpdate={setBalanceData}
-              onLiquidityUpdate={setLiquidityData}
-              onSwapUpdate={setSwapData}
-              onSwapRouterUpdate={setSwapRouterData}
-              onPoolCalculatorUpdate={setPoolCalculatorData}
-              onMarketInsightsUpdate={setMarketInsightsData}
-              onBridgeUpdate={handleBridgeUpdate}
-            />
+              <DeFiChat
+                onTokenResearchUpdate={setTokenResearchData}
+                onBalanceUpdate={setBalanceData}
+                onLiquidityUpdate={setLiquidityData}
+                onSwapUpdate={setSwapData}
+                onSwapRouterUpdate={setSwapRouterData}
+                onPoolCalculatorUpdate={setPoolCalculatorData}
+                onMarketInsightsUpdate={setMarketInsightsData}
+                onBridgeUpdate={handleBridgeUpdate}
+              />
             </div>
           </div>
 

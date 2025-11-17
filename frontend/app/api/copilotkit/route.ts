@@ -15,12 +15,7 @@ export async function POST(request: NextRequest) {
     process.env.MULTICHAIN_LIQUIDITY_AGENT_URL || "http://localhost:9998";
   const sentimentAgentUrl = process.env.SENTIMENT_AGENT_URL || "http://localhost:10000";
   const tradingAgentUrl = process.env.TRADING_AGENT_URL || "http://localhost:10001";
-  const tokenResearchAgentUrl =
-    process.env.TOKEN_RESEARCH_AGENT_URL || "http://localhost:10002";
-  // const poolCalculatorAgentUrl = process.env.POOL_CALCULATOR_AGENT_URL || "http://localhost:9996";
-  // const marketInsightsAgentUrl = process.env.MARKET_INSIGHTS_AGENT_URL || "http://localhost:9992";
-  // const swapRouterAgentUrl = process.env.SWAP_ROUTER_AGENT_URL || "http://localhost:9993";
-  // const bridgeAgentUrl = process.env.BRIDGE_AGENT_URL || "http://localhost:9998";
+  const tokenResearchAgentUrl = process.env.TOKEN_RESEARCH_AGENT_URL || "http://localhost:10002";
 
   // STEP 2: Define orchestrator URL (speaks AG-UI Protocol)
   const orchestratorUrl = process.env.ORCHESTRATOR_URL || "http://localhost:9000";
@@ -44,10 +39,6 @@ export async function POST(request: NextRequest) {
       sentimentAgentUrl, // Sentiment Agent (A2A) - Port 10000
       tradingAgentUrl, // Trading Agent (A2A) - Port 10001
       tokenResearchAgentUrl, // Token Research Agent (A2A) - Port 10002
-      // poolCalculatorAgentUrl, // Pool Calculator Agent (A2A) - Port 9996
-      // marketInsightsAgentUrl, // Market Insights Agent (A2A) - Port 9992
-      // swapRouterAgentUrl, // Swap Router Agent (A2A) - Port 9993
-      // bridgeAgentUrl, // Bridge Agent (A2A) - Port 9998
     ],
     orchestrationAgent,
     instructions: `

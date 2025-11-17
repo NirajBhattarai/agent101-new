@@ -103,17 +103,20 @@ frontend/
 ## 🎨 Key Technologies
 
 ### Core Framework
+
 - **Next.js 16**: React framework with App Router
 - **React 19**: UI library
 - **TypeScript**: Type safety
 
 ### UI & Chat
+
 - **CopilotKit**: Conversational AI interface
   - `@copilotkit/react-core`: Core CopilotKit functionality
   - `@copilotkit/react-ui`: UI components
   - `@copilotkit/runtime`: Runtime utilities
 
 ### Wallet Integration
+
 - **Reown AppKit** (formerly WalletConnect): Multi-chain wallet connectivity
   - `@reown/appkit`: Main AppKit library
   - `@reown/appkit-adapter-wagmi`: Wagmi adapter
@@ -121,15 +124,18 @@ frontend/
 - **Viem**: TypeScript Ethereum library
 
 ### State Management
+
 - **Redux Toolkit**: Global state management
 - **TanStack Query**: Server state and caching
 
 ### Blockchain Libraries
+
 - **@hashgraph/sdk**: Hedera Hashgraph SDK
 - **ethers**: Ethereum library
 - **@layerzerolabs/lz-v2-utilities**: LayerZero utilities
 
 ### Styling
+
 - **Tailwind CSS 4**: Utility-first CSS framework
 - **PostCSS**: CSS processing
 
@@ -193,11 +199,13 @@ Render Updated UI Component
 ### Installation
 
 1. **Navigate to frontend directory**:
+
 ```bash
 cd frontend
 ```
 
 2. **Install dependencies**:
+
 ```bash
 npm install
 ```
@@ -275,6 +283,7 @@ npm start
 **Handler**: `app/api/copilotkit/route.ts`
 
 Main CopilotKit route that:
+
 - Receives chat messages from CopilotKit UI
 - Forwards to orchestrator via AG-UI Protocol
 - Handles agent responses
@@ -286,6 +295,7 @@ Main CopilotKit route that:
 **Handler**: `app/api/orchestrator/route.ts`
 
 Direct proxy to orchestrator agent:
+
 - Accepts JSON-RPC requests
 - Forwards to orchestrator at `http://localhost:9000/`
 - Returns orchestrator responses
@@ -295,6 +305,7 @@ Direct proxy to orchestrator agent:
 **Handlers**: `app/api/facilitator/*/route.ts`
 
 Payment facilitator endpoints:
+
 - **`/api/facilitator/supported`**: Get supported payment kinds
 - **`/api/facilitator/verify`**: Verify payment payload
 - **`/api/facilitator/settle`**: Settle verified payment
@@ -304,7 +315,9 @@ Payment facilitator endpoints:
 ### Chat Components
 
 #### `DeFiChat`
+
 Main chat interface component that:
+
 - Integrates CopilotKit UI
 - Handles message sending/receiving
 - Parses agent responses
@@ -312,11 +325,13 @@ Main chat interface component that:
 - Manages conversation flow
 
 #### `MessageFromA2A` / `MessageToA2A`
+
 Custom message components for A2A protocol messages
 
 ### Feature Components
 
 Each feature has a dedicated card component:
+
 - **`BalanceCard`**: Displays account balances
 - **`SwapCard`**: Shows swap transaction details
 - **`LiquidityCard`**: Displays liquidity pool information
@@ -328,6 +343,7 @@ Each feature has a dedicated card component:
 ### Form Components
 
 Form components for user input:
+
 - **`BalanceForm`**: Balance query form
 - **`SwapForm`**: Swap transaction form
 - **`LiquidityForm`**: Liquidity query form
@@ -346,6 +362,7 @@ The frontend includes a built-in x402 payment facilitator for Hedera network.
 ### Overview
 
 The facilitator enables paywalled experiences by:
+
 - **Verifying** payment transactions before settlement
 - **Settling** verified payments on the Hedera network
 - **Paying transaction fees** on behalf of clients
@@ -359,6 +376,7 @@ The facilitator enables paywalled experiences by:
 ### Configuration
 
 Add to `.env.local`:
+
 ```bash
 HEDERA_FACILITATOR_ACCOUNT_ID=0.0.6805685
 HEDERA_FACILITATOR_PRIVATE_KEY=302e0201...
@@ -377,16 +395,19 @@ HEDERA_FACILITATOR_PRIVATE_KEY=302e0201...
 ### Testing
 
 Test the facilitator:
+
 ```bash
 npm run test:facilitator
 ```
 
 Or directly:
+
 ```bash
 tsx scripts/testFacilitator.ts
 ```
 
 **Test Environment Variables**:
+
 ```bash
 HEDERA_ACCOUNT_ID=0.0.123456
 HEDERA_PRIVATE_KEY=302e0201...
@@ -400,11 +421,13 @@ TOKEN_ID=0.0.429274  # if PAYMENT_TYPE=token
 ### Code Formatting
 
 Format code with Prettier:
+
 ```bash
 npm run format
 ```
 
 Check formatting:
+
 ```bash
 npm run format:check
 ```
@@ -412,6 +435,7 @@ npm run format:check
 ### Linting
 
 Lint code with ESLint:
+
 ```bash
 npm run lint
 ```
@@ -419,6 +443,7 @@ npm run lint
 ### Type Checking
 
 TypeScript type checking is done automatically by the Next.js build process:
+
 ```bash
 npm run build
 ```
@@ -426,20 +451,24 @@ npm run build
 ## 📦 Scripts
 
 ### Development
+
 - `npm run dev` - Start development server
 - `npm run build` - Build for production
 - `npm start` - Start production server
 
 ### Code Quality
+
 - `npm run lint` - Run ESLint
 - `npm run format` - Format with Prettier
 - `npm run format:check` - Check formatting
 
 ### Testing
+
 - `npm run test:facilitator` - Test payment facilitator
 - `npm run test:facilitator:ethers` - Test facilitator with Ethers
 
 ### Utility Scripts
+
 - `npm run swap` - Run swap test script
 - `npm run mcp:swap` - Run MCP swap script
 - `npm run swap:usdc-to-hbar` - Run USDC to HBAR swap
@@ -449,6 +478,7 @@ npm run build
 ### Redux Store
 
 Global state managed with Redux Toolkit:
+
 - Wallet connection state
 - Feature card data (balance, swap, liquidity, etc.)
 - User preferences
@@ -456,6 +486,7 @@ Global state managed with Redux Toolkit:
 ### TanStack Query
 
 Server state and caching:
+
 - Blockchain data queries
 - Agent response caching
 - Optimistic updates
@@ -463,6 +494,7 @@ Server state and caching:
 ### Local State
 
 Component-level state with React hooks:
+
 - Form inputs
 - UI state (modals, dropdowns)
 - Temporary data
@@ -472,6 +504,7 @@ Component-level state with React hooks:
 ### Supported Wallets
 
 Reown AppKit supports:
+
 - MetaMask
 - WalletConnect
 - Coinbase Wallet
@@ -486,6 +519,7 @@ Reown AppKit supports:
 ### Wallet State
 
 Access wallet state in components:
+
 ```typescript
 import { useAppKitAccount } from "@reown/appkit/react";
 
@@ -497,6 +531,7 @@ const { address, isConnected } = useAppKitAccount?.() || {};
 ### Tailwind CSS
 
 Utility-first CSS framework:
+
 - Custom color palette
 - Responsive design utilities
 - Component styling
@@ -518,6 +553,7 @@ Utility-first CSS framework:
 ### Environment Variables for Production
 
 Set in Vercel dashboard:
+
 - `NEXT_PUBLIC_REOWN_PROJECT_ID`
 - `HEDERA_FACILITATOR_ACCOUNT_ID`
 - `HEDERA_FACILITATOR_PRIVATE_KEY`

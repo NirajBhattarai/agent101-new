@@ -166,7 +166,8 @@ const ChatInner = ({
                 });
                 // Only trigger UI update if this is an explicit token research query
                 // Internal token research for swaps should not show the card
-                const isExplicitQuery = parsed.query_type === "search" || parsed.query_type === "discovery";
+                const isExplicitQuery =
+                  parsed.query_type === "search" || parsed.query_type === "discovery";
                 if (isExplicitQuery) {
                   onTokenResearchUpdate?.(parsed as TokenResearchData);
                 } else {
@@ -174,7 +175,11 @@ const ChatInner = ({
                 }
               }
               // Check if it's balance data
-              else if (parsed.type === "balance" && parsed.balances && Array.isArray(parsed.balances)) {
+              else if (
+                parsed.type === "balance" &&
+                parsed.balances &&
+                Array.isArray(parsed.balances)
+              ) {
                 onBalanceUpdate?.(parsed as BalanceData);
               }
               // Check if it's liquidity data (regular or parallel)

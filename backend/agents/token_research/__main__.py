@@ -34,7 +34,7 @@ skill = AgentSkill(
 
 cardUrl = os.getenv("RENDER_EXTERNAL_URL", f"http://localhost:{port}")
 public_agent_card = AgentCard(
-    name="Token Research Agent (LangGraph)",
+    name="Token Research",
     description="Agent that discovers and searches for tokens across blockchain chains using LangGraph with CoinGecko API and web search",
     url=cardUrl,
     version="2.0.0",

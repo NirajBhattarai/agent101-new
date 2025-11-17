@@ -42,7 +42,9 @@ def search_token_on_web(token_symbol: str) -> dict | None:
 
         return {
             "token_symbol": token_symbol.upper(),
-            "search_results": results if results else [{"title": "Search Result", "snippet": search_result[:500]}],
+            "search_results": results
+            if results
+            else [{"title": "Search Result", "snippet": search_result[:500]}],
             "source": "duckduckgo_search",
         }
     except Exception as e:
@@ -78,12 +80,14 @@ def search_token_contract_address(token_symbol: str, chain: str) -> dict | None:
         search_response = requests.get(
             search_url, params=search_params, headers=search_headers, timeout=10
         )
-        
+
         # Handle rate limiting for free tier
         if search_response.status_code == 429:
-            print("⚠️  CoinGecko rate limit reached. Consider using COINGECKO_API_KEY for higher limits.")
+            print(
+                "⚠️  CoinGecko rate limit reached. Consider using COINGECKO_API_KEY for higher limits."
+            )
             return None
-            
+
         search_response.raise_for_status()
         search_data = search_response.json()
 
@@ -116,12 +120,14 @@ def search_token_contract_address(token_symbol: str, chain: str) -> dict | None:
                 coin_headers["x-cg-pro-api-key"] = api_key
 
         coin_response = requests.get(coin_url, params=coin_params, headers=coin_headers, timeout=10)
-        
+
         # Handle rate limiting for free tier
         if coin_response.status_code == 429:
-            print("⚠️  CoinGecko rate limit reached. Consider using COINGECKO_API_KEY for higher limits.")
+            print(
+                "⚠️  CoinGecko rate limit reached. Consider using COINGECKO_API_KEY for higher limits."
+            )
             return None
-            
+
         coin_response.raise_for_status()
         coin_data = coin_response.json()
 

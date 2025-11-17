@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
       "DeFi orchestrator with balance, multi-chain liquidity, pool calculator, swap, swap router, bridge, sentiment, trading, and token research agents (Hedera, Polygon, Ethereum)",
     agentUrls: [
       balanceAgentUrl, // Balance Agent (A2A) - Port 9997
-      multichainLiquidityAgentUrl, // Multi-Chain Liquidity Agent (A2A) - Port 9998
+      multichainLiquidityAgentUrl, // LiquidityFinder (A2A) - Port 9998
       swapAgentUrl, // Swap Agent (A2A) - Port 9999
       sentimentAgentUrl, // Sentiment Agent (A2A) - Port 10000
       tradingAgentUrl, // Trading Agent (A2A) - Port 10001
@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
          - Returns swap configuration with transaction details
          - **IMPORTANT**: The orchestrator will first check balance and liquidity before calling this agent
 
-      3. **Multi-Chain Liquidity Agent** (ADK)
+      3. **LiquidityFinder** (ADK)
          - Fetches liquidity information sequentially from multiple blockchain chains (Hedera, Polygon, Ethereum)
          - Can query specific chains or get liquidity from all chains
          - Supports both token pair queries (e.g., "ETH/USDT") and general chain queries
@@ -155,7 +155,7 @@ export async function POST(request: NextRequest) {
            * Wait for the user to submit the complete requirements
            * Use the returned values for all subsequent agent calls
          - **STEP 3 - Agent Call (AFTER REQUIREMENTS)**: 
-           * ONLY after both payment verification AND requirements are complete, call Multi-Chain Liquidity Agent
+           * ONLY after both payment verification AND requirements are complete, call LiquidityFinder
            * Format: "Get liquidity for [token_pair]" or "Get liquidity on [chain]"
            * **NOTE**: Payment settlement will happen automatically AFTER the liquidity response is received
 
@@ -173,10 +173,10 @@ export async function POST(request: NextRequest) {
             - If balance is insufficient, inform user and STOP - do not proceed to swap
             - If balance is sufficient, proceed to Step 2
          
-         2. **STEP 2: Get Pool/Liquidity** - Call Multi-Chain Liquidity Agent
+         2. **STEP 2: Get Pool/Liquidity** - Call LiquidityFinder
             - Extract token pair from user query (token_in and token_out)
             - Extract chain from user query
-            - Call Multi-Chain Liquidity Agent: "Get liquidity for [token_in]/[token_out] on [chain]"
+            - Call LiquidityFinder: "Get liquidity for [token_in]/[token_out] on [chain]"
             - Wait for liquidity response
             - Verify that a pool exists for the token pair on the specified chain
             - If no pool exists, inform user and STOP - do not proceed to swap
@@ -190,7 +190,7 @@ export async function POST(request: NextRequest) {
          
          **CRITICAL RULES FOR SWAP WORKFLOW**:
          - ALWAYS call Balance Agent FIRST before Swap Agent
-         - ALWAYS call Multi-Chain Liquidity Agent SECOND to verify pool exists
+         - ALWAYS call LiquidityFinder SECOND to verify pool exists
          - ALWAYS call Swap Agent LAST to execute the swap
          - NEVER skip balance check - it's mandatory
          - NEVER skip liquidity check - it's mandatory
@@ -222,7 +222,7 @@ export async function POST(request: NextRequest) {
          - Wait for liquidity data including pools, DEXs, TVL, reserves, and fees
          - Present liquidity information in a clear, organized format
 
-      2. **Multi-Chain Liquidity Agent** - For all liquidity queries
+      2. **LiquidityFinder** - For all liquidity queries
          - **CRITICAL: DO NOT CALL THIS AGENT DIRECTLY - Payment is required first!**
          - **MANDATORY WORKFLOW**: Payment → Requirements → Agent Call
          - **NEVER skip the payment step for liquidity queries**
@@ -268,10 +268,10 @@ export async function POST(request: NextRequest) {
       - **FOR LIQUIDITY QUERIES - MANDATORY 3-STEP PROCESS (NO EXCEPTIONS):**
         1. **FIRST**: Call 'gather_liquidity_payment' - User signs and verifies payment (0.1 HBAR)
         2. **SECOND**: After payment is verified, call 'gather_liquidity_requirements'
-        3. **THIRD**: After requirements are gathered, call Multi-Chain Liquidity Agent
+        3. **THIRD**: After requirements are gathered, call LiquidityFinder
         4. **FOURTH**: After liquidity response is received, payment settlement happens automatically
         - **NEVER skip step 1 (payment) for liquidity queries**
-        - **NEVER call Multi-Chain Liquidity Agent directly without payment verification**
+        - **NEVER call LiquidityFinder directly without payment verification**
         - **NEVER call 'gather_liquidity_requirements' before payment is verified**
         - **Payment settlement occurs AFTER liquidity data is returned to user**
       - **ALWAYS START by calling 'gather_swap_requirements' FIRST when user asks to swap tokens**
@@ -304,11 +304,11 @@ export async function POST(request: NextRequest) {
       - "What's my HBAR balance for account 0.0.123456?" -> gather_balance_requirements with accountAddress: "0.0.123456", chain: "hedera"
       - "Get balance for 0x1234... on all chains" -> gather_balance_requirements with accountAddress: "0x1234...", chain: "all"
       - "Check USDC balance" -> gather_balance_requirements with tokenAddress: "USDC"
-      - "Get liquidity for HBAR/USDC" -> **FIRST**: gather_liquidity_payment, **THEN**: gather_liquidity_requirements, **THEN**: Multi-Chain Liquidity Agent
-      - "Show me all pools on Hedera" -> **FIRST**: gather_liquidity_payment, **THEN**: gather_liquidity_requirements, **THEN**: Multi-Chain Liquidity Agent
-      - "Get liquidity for ETH/USDT" -> **FIRST**: gather_liquidity_payment, **THEN**: gather_liquidity_requirements, **THEN**: Multi-Chain Liquidity Agent
-      - "Find ETH USDT from different chain" -> **FIRST**: gather_liquidity_payment, **THEN**: gather_liquidity_requirements, **THEN**: Multi-Chain Liquidity Agent
-      - "Find liquidity pools" -> **FIRST**: gather_liquidity_payment, **THEN**: gather_liquidity_requirements, **THEN**: Multi-Chain Liquidity Agent
+      - "Get liquidity for HBAR/USDC" -> **FIRST**: gather_liquidity_payment, **THEN**: gather_liquidity_requirements, **THEN**: LiquidityFinder
+      - "Show me all pools on Hedera" -> **FIRST**: gather_liquidity_payment, **THEN**: gather_liquidity_requirements, **THEN**: LiquidityFinder
+      - "Get liquidity for ETH/USDT" -> **FIRST**: gather_liquidity_payment, **THEN**: gather_liquidity_requirements, **THEN**: LiquidityFinder
+      - "Find ETH USDT from different chain" -> **FIRST**: gather_liquidity_payment, **THEN**: gather_liquidity_requirements, **THEN**: LiquidityFinder
+      - "Find liquidity pools" -> **FIRST**: gather_liquidity_payment, **THEN**: gather_liquidity_requirements, **THEN**: LiquidityFinder
       - "Swap 0.01 HBAR to USDC" -> gather_swap_requirements, then Swap Agent
       - "I want to swap USDC for HBAR on Hedera" -> gather_swap_requirements, then Swap Agent
       - "Swap 50 MATIC to USDC on Polygon" -> gather_swap_requirements, then Swap Agent

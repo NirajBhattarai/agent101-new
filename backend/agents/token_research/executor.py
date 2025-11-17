@@ -94,8 +94,6 @@ class TokenResearchExecutor(AgentExecutor):
         """Validate the request context."""
         return False
 
-    async def cancel(
-        self, context: RequestContext, event_queue: EventQueue
-    ) -> None:
+    async def cancel(self, context: RequestContext, event_queue: EventQueue) -> None:
         """Cancel execution (not supported)."""
         raise ServerError(error=UnsupportedOperationError())

@@ -2,18 +2,7 @@
  * Utility functions for Liquidity Requirements Form
  */
 
-import { filterStrings, getTokenPairError, type FormErrors } from "../shared";
-
-/**
- * Filter pairs based on search query with optional regex support
- */
-export function filterPairs(
-  pairs: string[],
-  searchQuery: string,
-  useRegex: boolean = false,
-): string[] {
-  return filterStrings(pairs, searchQuery, useRegex);
-}
+import { getTokenPairError, type FormErrors } from "../shared";
 
 /**
  * Validate liquidity form

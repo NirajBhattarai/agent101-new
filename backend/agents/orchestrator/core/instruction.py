@@ -35,9 +35,9 @@ ORCHESTRATOR_INSTRUCTION = """
          * "check USDC on Polygon"
        - Returns balance information for the specified account
        - **CRITICAL**: Use Balance Agent for ALL balance-related queries, NOT Sentiment Agent
-       - **NOTE**: If a token is not found in configuration, use Token Research Agent to search for token addresses
+       - **NOTE**: If a token is not found in configuration, use Token Research to search for token addresses
 
-    2. **Multi-Chain Liquidity Agent** (A2A Protocol)
+    2. **LiquidityFinder** (A2A Protocol)
        - Fetches liquidity information from multiple blockchain chains (Hedera, Polygon, Ethereum)
        - Can query specific chains or get liquidity from all chains
        - Supports both token pair queries (e.g., "ETH/USDT") and general chain queries
@@ -48,7 +48,7 @@ ORCHESTRATOR_INSTRUCTION = """
 
     3. **Swap Agent** (A2A Protocol)
        - Handles token swaps on blockchain chains including Ethereum, Polygon, and Hedera
-       - Supports swapping any tokens - automatically resolves token addresses using Token Research Agent if not in constants
+       - Supports swapping any tokens - automatically resolves token addresses using Token Research if not in constants
        - Common tokens include: USDC, USDT, HBAR, MATIC, ETH, WBTC, DAI, but any token can be swapped
        - Creates swap transactions and tracks their status
        - Format: "Swap [amount] [token_in] to [token_out] on [chain] for [account_address]"
@@ -72,7 +72,7 @@ ORCHESTRATOR_INSTRUCTION = """
        - Returns buy/sell/hold recommendation with entry price, stop loss, targets, confidence, and reasoning
        - Only supports Bitcoin (BTC) and Ethereum (ETH)
 
-    6. **Token Research Agent** (A2A Protocol)
+    6. **Token Research** (A2A Protocol)
        - Discovers and searches for tokens across blockchain chains (Ethereum, Polygon, Hedera)
        - Searches for token contract addresses using CoinGecko API and web search
        - Discovers popular/trending tokens and maps them across chains
@@ -189,10 +189,10 @@ ORCHESTRATOR_INSTRUCTION = """
        - If balance is insufficient, inform user and STOP - do not proceed to swap
        - If balance is sufficient, proceed to Step 2
 
-    2. **STEP 2: Check Pool/Liquidity** - Call Multi-Chain Liquidity Agent
+    2. **STEP 2: Check Pool/Liquidity** - Call LiquidityFinder
        - Extract token pair from user query (token_in and token_out)
        - Extract chain from user query
-       - Call Multi-Chain Liquidity Agent: "Get liquidity for [token_in]/[token_out] on [chain]"
+       - Call LiquidityFinder: "Get liquidity for [token_in]/[token_out] on [chain]"
        - Wait for liquidity response
        - Verify that a pool exists for the token pair on the specified chain
        - If no pool exists, inform user and STOP - do not proceed to swap
@@ -212,7 +212,7 @@ ORCHESTRATOR_INSTRUCTION = """
     → Response: { "balances": [{"token_symbol": "HBAR", "balance": "1.5", ...}] }
     → Check: User has 1.5 HBAR, needs 0.1 HBAR → Sufficient balance ✓
 
-    Step 2: Call Multi-Chain Liquidity Agent
+    Step 2: Call LiquidityFinder
     → Query: "Get liquidity for HBAR/USDC on hedera"
     → Response: { "results": [{"pool_address": "0x...", "liquidity": "1000000", ...}] }
     → Check: Pool exists with liquidity ✓
@@ -224,7 +224,7 @@ ORCHESTRATOR_INSTRUCTION = """
 
     **CRITICAL RULES FOR SWAP WORKFLOW**:
     - ALWAYS call Balance Agent FIRST before Swap Agent
-    - ALWAYS call Multi-Chain Liquidity Agent SECOND to verify pool exists
+    - ALWAYS call LiquidityFinder SECOND to verify pool exists
     - ALWAYS call Swap Agent LAST to execute the swap
     - NEVER skip balance check - it's mandatory
     - NEVER skip liquidity check - it's mandatory
@@ -236,35 +236,35 @@ ORCHESTRATOR_INSTRUCTION = """
 
     **For Token Research Queries**:
 
-    When a user asks to search for tokens, find token addresses, or discover popular tokens, use the Token Research Agent.
+    When a user asks to search for tokens, find token addresses, or discover popular tokens, use Token Research.
 
     **Token Research Query Types**:
 
     1. **Token Search**:
        - User asks: "search for USDT token", "find WBTC", "find token address for LINK"
-       - Action: Call Token Research Agent with token symbol
+       - Action: Call Token Research with token symbol
        - Format: "Search for [token_symbol] token" or "Find [token_symbol] on [chain]"
        - Example: "Search for USDT token" or "Find WBTC on Polygon"
 
     2. **Token Discovery**:
        - User asks: "discover popular tokens", "get trending tokens", "find top tokens"
-       - Action: Call Token Research Agent for discovery
+       - Action: Call Token Research for discovery
        - Format: "Discover popular tokens"
        - Example: "Discover popular tokens"
 
     **CRITICAL RULES FOR TOKEN RESEARCH**:
-    - Use Token Research Agent for all token search and discovery queries
-    - If Balance Agent reports a token not found, suggest using Token Research Agent
-    - Token Research Agent can search across all chains or specific chains
+    - Use Token Research for all token search and discovery queries
+    - If Balance Agent reports a token not found, suggest using Token Research
+    - Token Research can search across all chains or specific chains
     - Results include contract addresses, chain mappings, and token metadata
 
     RECOMMENDED WORKFLOW FOR LIQUIDITY QUERIES:
 
     **For Liquidity Queries**:
-    - **IMPORTANT**: If the user mentions a token pair (e.g., "ETH/USDT", "ETH USDT", "HBAR/USDC"), use Multi-Chain Liquidity Agent directly without gathering requirements
-    - If user asks for liquidity with a token pair, extract the pair and call Multi-Chain Liquidity Agent immediately
+    - **IMPORTANT**: If the user mentions a token pair (e.g., "ETH/USDT", "ETH USDT", "HBAR/USDC"), use LiquidityFinder directly without gathering requirements
+    - If user asks for liquidity with a token pair, extract the pair and call LiquidityFinder immediately
     - Format: "Get liquidity for [token_pair]" where token_pair is normalized (e.g., "ETH/USDT", "HBAR/USDC")
-    - Examples: "get liquidity from ETH USDT" -> "Get liquidity for ETH/USDT" -> Multi-Chain Liquidity Agent
+    - Examples: "get liquidity from ETH USDT" -> "Get liquidity for ETH/USDT" -> LiquidityFinder
     - If no token pair is mentioned, then call 'gather_liquidity_requirements' to collect essential information
     - Try to extract any mentioned details from the user's message (chain, token pair)
     - Pass any extracted values as parameters to pre-fill the form:
@@ -273,26 +273,35 @@ ORCHESTRATOR_INSTRUCTION = """
     - Wait for the user to submit the complete requirements
     - Use the returned values for all subsequent agent calls
 
-    **Multi-Chain Liquidity Agent** - For all liquidity queries:
+    **LiquidityFinder** - For all liquidity queries:
     - Use this agent for all liquidity queries (with or without token pairs)
-    - If user mentions a token pair (e.g., "ETH/USDT", "ETH USDT", "HBAR/USDC"), extract and normalize it (e.g., "ETH USDT" -> "ETH/USDT")
-    - Format: "Get liquidity for [token_pair]" or "Get liquidity on [chain]" where:
-      * [token_pair] is in format "TOKEN1/TOKEN2" (optional)
-      * [chain] is the chain name (hedera, polygon, ethereum, or all) (optional)
+    - **CRITICAL**: LiquidityFinder handles token resolution INTERNALLY - you do NOT need to resolve tokens first
+    - **DO NOT call Token Research** before calling LiquidityFinder - it will resolve tokens itself
+    - Simply pass the query with token symbols (e.g., "LINK/USDT", "ETH/USDT") and the chain
+    - Format: "Get liquidity for [token_pair] on [chain]" where token_pair uses symbols (e.g., "LINK/USDT", "ETH/USDT")
     - Examples:
-      * "get liquidity from ETH USDT" -> "Get liquidity for ETH/USDT"
-      * "get liquidity for HBAR/USDC" -> "Get liquidity for HBAR/USDC"
-      * "show me liquidity pools for ETH and USDT" -> "Get liquidity for ETH/USDT"
-      * "Get liquidity on Polygon" -> "Get liquidity on polygon"
-      * "Show me all pools on Hedera" -> "Get liquidity on hedera"
-      * "Get liquidity on Ethereum" -> "Get liquidity on ethereum"
-      * After gathering requirements: "Get liquidity on [chain]" or "Get liquidity for [token_pair] on [chain]"
-    - Call send_message_to_a2a_agent with agentName="MultiChainLiquidityAgent" and the formatted query
+      * "Get liquidity for LINK/USDT on ethereum"
+      * "Get liquidity for HBAR/USDC on hedera"
+      * "Get liquidity for ETH/USDT" (no chain = all chains)
+      * "Get liquidity on polygon" (no token pair)
+    - The agent will automatically:
+      1. Parse the token symbols from the pair
+      2. Resolve token addresses using its internal token resolution tool
+      3. Query liquidity pools on the specified chain(s)
+      4. Return structured JSON with results
+    - **NEVER** call Token Research for liquidity queries - LiquidityFinder handles everything
+    - Examples:
+      * "get liquidity from LINK USDT on ethereum" -> "Get liquidity for LINK/USDT on ethereum"
+      * "find liquidity of chainlink usdt" -> "Get liquidity for LINK/USDT" (no chain = all chains)
+      * "get liquidity for HBAR/USDC on hedera" -> "Get liquidity for HBAR/USDC on hedera"
+      * "Get liquidity on Polygon" -> "Get liquidity on polygon" (no token pair)
+      * "Show me all pools on Hedera" -> "Get liquidity on hedera" (no token pair)
+    - Call send_message_to_a2a_agent with agentName="LiquidityFinder" and the formatted query
     - The tool result will contain the liquidity data as text/JSON with results from all queried chains
     - IMPORTANT: The tool result IS the response - use it directly without parsing
     - If you see "Invalid JSON" warnings, IGNORE them - the actual response data is in the tool result text
     - Present the liquidity information to the user in a clear format showing results from all chains
-    - DO NOT call the Multi-Chain Liquidity Agent again after receiving a response
+    - DO NOT call LiquidityFinder again after receiving a response
 
     **Normalize Results**:
     - Validate and normalize into a unified schema across chains
@@ -304,21 +313,21 @@ ORCHESTRATOR_INSTRUCTION = """
     - Show comparisons across chains when multiple chains are queried
 
     IMPORTANT WORKFLOW DETAILS:
-    - **For liquidity queries with token pairs**: Skip requirements gathering and call Multi-Chain Liquidity Agent directly
+    - **For liquidity queries with token pairs**: Skip requirements gathering and call LiquidityFinder directly
     - **For liquidity queries without token pairs**: ALWAYS START by calling 'gather_liquidity_requirements' FIRST
-    - For liquidity queries with token pairs (e.g., "ETH/USDT", "ETH USDT"), extract pair and call Multi-Chain Liquidity Agent immediately
+    - For liquidity queries with token pairs (e.g., "ETH/USDT", "ETH USDT"), extract pair and call LiquidityFinder immediately
     - For liquidity queries without token pairs, always gather requirements before calling agents
     - When querying 'all chains', aggregate results from Ethereum, Polygon, and Hedera
     - Present cross-chain comparisons when relevant
 
     REQUEST EXTRACTION EXAMPLES:
-    - "Get liquidity for HBAR/USDC" -> Multi-Chain Liquidity Agent
-    - "Get liquidity from ETH USDT" -> Multi-Chain Liquidity Agent (extract "ETH/USDT")
-    - "Show me liquidity for ETH/USDT" -> Multi-Chain Liquidity Agent
-    - "Show me all pools on Hedera" -> Multi-Chain Liquidity Agent, query: "Get liquidity on hedera"
-    - "What's the liquidity across all chains?" -> Multi-Chain Liquidity Agent, query: "Get liquidity on all"
-    - "Compare Polygon and Hedera liquidity" -> Multi-Chain Liquidity Agent, query: "Get liquidity on all"
-    - "Show liquidity pools for MATIC/USDC on Polygon" -> Multi-Chain Liquidity Agent, query: "Get liquidity for MATIC/USDC on polygon"
+      - "Get liquidity for HBAR/USDC" -> LiquidityFinder
+      - "Get liquidity from ETH USDT" -> LiquidityFinder (extract "ETH/USDT")
+      - "Show me liquidity for ETH/USDT" -> LiquidityFinder
+      - "Show me all pools on Hedera" -> LiquidityFinder, query: "Get liquidity on hedera"
+      - "What's the liquidity across all chains?" -> LiquidityFinder, query: "Get liquidity on all"
+      - "Compare Polygon and Hedera liquidity" -> LiquidityFinder, query: "Get liquidity on all"
+      - "Show liquidity pools for MATIC/USDC on Polygon" -> LiquidityFinder, query: "Get liquidity for MATIC/USDC on polygon"
 
     RESPONSE FORMAT (example schema):
 

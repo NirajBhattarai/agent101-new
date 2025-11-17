@@ -18,14 +18,14 @@ from a2a.server.request_handlers import DefaultRequestHandler
 from a2a.server.tasks import InMemoryTaskStore
 from a2a.types import AgentCapabilities, AgentCard, AgentSkill
 
-from .executor import LiquidityExecutor
+from .executor import LiquidityExecutor  # noqa: E402
 
 # Railway uses PORT env var, fallback to LIQUIDITY_PORT or default
 port = int(os.getenv("PORT", os.getenv("LIQUIDITY_PORT", 9998)))
 
 skill = AgentSkill(
     id="multichain_liquidity_agent",
-    name="MultiChainLiquidityAgent",
+    name="LiquidityFinder",
     description=(
         "Retrieves liquidity pool information from multiple blockchain chains "
         "(Ethereum, Polygon, Hedera) using parallel execution with ADK. "
@@ -54,7 +54,7 @@ skill = AgentSkill(
 
 cardUrl = os.getenv("RENDER_EXTERNAL_URL", f"http://localhost:{port}")
 public_agent_card = AgentCard(
-    name="MultiChainLiquidityAgent",
+    name="LiquidityFinder",
     description=(
         "ADK-powered agent that retrieves liquidity pool information from multiple blockchain chains "
         "using parallel execution. Queries Uniswap V3 pools on Ethereum and Polygon mainnets, "

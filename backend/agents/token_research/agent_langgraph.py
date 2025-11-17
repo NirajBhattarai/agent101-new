@@ -181,16 +181,18 @@ class TokenResearchLangGraphAgent:
             response_format=(self.FORMAT_INSTRUCTION, ResponseFormat),
         )
 
-    async def stream(
-        self, query: str, context_id: str
-    ) -> AsyncIterable[dict[str, Any]]:
+    async def stream(self, query: str, context_id: str) -> AsyncIterable[dict[str, Any]]:
         """Stream agent responses with status updates."""
         inputs = {"messages": [("user", query)]}
         config = {"configurable": {"thread_id": context_id}}
 
         for item in self.graph.stream(inputs, config, stream_mode="values"):
             message = item["messages"][-1]
-            if isinstance(message, AIMessage) and message.tool_calls and len(message.tool_calls) > 0:
+            if (
+                isinstance(message, AIMessage)
+                and message.tool_calls
+                and len(message.tool_calls) > 0
+            ):
                 yield {
                     "is_task_complete": False,
                     "require_user_input": False,
@@ -248,4 +250,3 @@ class TokenResearchLangGraphAgent:
         }
 
     SUPPORTED_CONTENT_TYPES = ["text", "text/plain"]
-

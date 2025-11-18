@@ -1,0 +1,100 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "x402-hedera-python"
+version = "0.1.0"
+description = "x402 Payment Protocol implementation for Hedera Hashgraph"
+readme = "README.md"
+requires-python = ">=3.11,<3.13"
+license = {text = "Apache-2.0"}
+authors = [
+    {name = "Agent101 Team"}
+]
+keywords = ["x402", "hedera", "hashgraph", "payments", "crypto", "defi"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Internet",
+]
+
+dependencies = [
+    # Hedera SDK
+    "hiero-sdk-python>=0.1.7,<0.2.0",
+    
+    # Data Validation & Settings
+    "pydantic>=2.5.0",
+    "pydantic-settings>=2.1.0",
+    
+    # HTTP Client
+    "httpx>=0.26.0",
+    "requests>=2.32.3",
+    
+    # Encoding utilities
+    "base58>=2.1.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    # Testing
+    "pytest>=7.4.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-cov>=4.1.0",
+    
+    # Code Formatting & Linting
+    "ruff>=0.1.0",
+    
+    # Type Checking
+    "mypy>=1.8.0",
+]
+
+[tool.setuptools]
+packages = ["x402_hedera"]
+
+[tool.setuptools.package-dir]
+"" = "src"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+exclude = [
+    ".git",
+    ".venv",
+    "__pycache__",
+    "dist",
+    "build",
+]
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "I",    # isort
+    "B",    # flake8-bugbear
+    "C4",   # flake8-comprehensions
+    "UP",   # pyupgrade
+]
+ignore = [
+    "E501",   # line too long, handled by formatter
+    "E402",   # module level import not at top of file
+]
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = [
+    "hiero.*",
+]
+ignore_errors = true
+

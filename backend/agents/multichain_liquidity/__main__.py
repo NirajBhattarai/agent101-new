@@ -17,8 +17,21 @@ from a2a.server.apps import A2AStarletteApplication
 from a2a.server.request_handlers import DefaultRequestHandler
 from a2a.server.tasks import InMemoryTaskStore
 from a2a.types import AgentCapabilities, AgentCard, AgentSkill
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request
+from starlette.responses import Response
 
 from .executor import LiquidityExecutor  # noqa: E402
+
+
+# Define custom middleware
+class CustomLoggingMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        print(f"Request URL: {request.url}")
+        response = await call_next(request)
+        print(f"Response status: {response.status_code}")
+        return response
+
 
 # Railway uses PORT env var, fallback to LIQUIDITY_PORT or default
 port = int(os.getenv("PORT", os.getenv("LIQUIDITY_PORT", 9998)))
@@ -91,10 +104,13 @@ def main():
         extended_agent_card=public_agent_card,
     )
 
+    app = server.build()
+    app.add_middleware(CustomLoggingMiddleware)
+
     print(f"💧 Starting Multi-Chain Liquidity Agent (ADK + A2A) on http://0.0.0.0:{port}")
     print(f"   Agent: {public_agent_card.name}")
     print(f"   Description: {public_agent_card.description}")
-    uvicorn.run(server.build(), host="0.0.0.0", port=port)
+    uvicorn.run(app, host="0.0.0.0", port=port)
 
 
 if __name__ == "__main__":

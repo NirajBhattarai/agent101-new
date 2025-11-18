@@ -59,6 +59,55 @@ const ChatInner = ({
           try {
             const result = msg.result;
             console.log("📥 Raw A2A result:", typeof result, result?.substring?.(0, 200) || result);
+            
+            // Check if this is a 402 Payment Required response from LiquidityFinder
+            if (typeof result === "string") {
+              // Check for 402 payment required indicators
+              const is402Response = 
+                result.includes("402") ||
+                result.includes("Payment Required") ||
+                result.includes("x402_version") ||
+                result.includes('"accepts"') ||
+                result.includes("No X-PAYMENT header provided");
+              
+              if (is402Response) {
+                // Check if this is from LiquidityFinder agent
+                const actionArgs = msg.actionArgs as any;
+                const agentName = actionArgs?.agentName || "";
+                
+                if (agentName === "LiquidityFinder" || agentName === "Liquidity") {
+                  console.log("💰 Detected 402 Payment Required from LiquidityFinder");
+                  
+                  // Parse payment requirements if available
+                  let paymentRequirements = null;
+                  try {
+                    const parsed = JSON.parse(result);
+                    if (parsed.accepts && Array.isArray(parsed.accepts) && parsed.accepts.length > 0) {
+                      paymentRequirements = parsed.accepts[0];
+                      console.log("   Payment requirements:", {
+                        payTo: paymentRequirements.payTo,
+                        maxAmountRequired: paymentRequirements.maxAmountRequired,
+                        asset: paymentRequirements.asset,
+                      });
+                    }
+                  } catch (e) {
+                    // Not JSON, that's okay
+                    console.log("   Could not parse payment requirements");
+                  }
+                  
+                  // Format the response to explicitly tell the orchestrator to call gather_liquidity_payment
+                  // Make it very clear and explicit so the orchestrator recognizes it
+                  const formattedResponse = `🔴 PAYMENT REQUIRED (402 ERROR): The LiquidityFinder agent returned a 402 Payment Required response. This means payment is required before accessing liquidity data. You MUST immediately call the 'gather_liquidity_payment' action to collect payment from the user. Do not try to parse or understand the 402 response - just call gather_liquidity_payment right away. After payment is verified, you can retry the liquidity query with the same parameters.`;
+                  
+                  // Update the message result so the orchestrator sees the formatted response
+                  msg.result = formattedResponse;
+                  console.log("   ✅ Formatted 402 response - orchestrator will trigger payment form");
+                  console.log("   📝 Formatted message:", formattedResponse.substring(0, 100) + "...");
+                  // Continue processing - the orchestrator will see this and call gather_liquidity_payment
+                }
+              }
+            }
+            
             let parsed;
 
             if (typeof result === "string") {

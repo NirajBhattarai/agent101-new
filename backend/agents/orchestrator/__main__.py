@@ -30,7 +30,7 @@ except ImportError:
 
 from .agent import build_adk_orchestrator_agent  # noqa: E402
 from .core.constants import DEFAULT_PORT  # noqa: E402
-from .core.logger import log_agent_message, log_error, log_request, log_response  # noqa: E402
+from .core.logger import log_agent_message, log_error, log_request, log_response, logger  # noqa: E402
 
 
 class LoggingMiddleware:
@@ -112,6 +112,17 @@ class LoggingMiddleware:
                             else None
                         )
 
+                    # Check for 402 Payment Required in response
+                    if response_status == 402:
+                        logger.warning("💰 402 Payment Required detected in response")
+                        if response_body_json:
+                            if isinstance(response_body_json, dict):
+                                if "payment_required" in response_body_json or "x402_version" in response_body_json:
+                                    logger.warning(f"   Payment required: {response_body_json.get('error', 'N/A')}")
+                                    logger.warning(f"   x402_version: {response_body_json.get('x402_version', 'N/A')}")
+                                    if "accepts" in response_body_json:
+                                        logger.warning(f"   Payment options: {len(response_body_json.get('accepts', []))} option(s)")
+                    
                     log_response(
                         status_code=response_status or 200,
                         headers=response_headers,

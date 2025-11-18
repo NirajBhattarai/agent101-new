@@ -8,7 +8,7 @@ from x402_hedera.types import PaymentPayload, PaymentRequirements
 from x402_hedera.encoding import encode_payment
 
 if TYPE_CHECKING:
-    from hiero import AccountId, PrivateKey, Client
+    from hiero_sdk_python import AccountId, PrivateKey, Client
 
 
 async def create_payment_header(
@@ -65,7 +65,7 @@ async def create_and_sign_payment(
     Raises:
         Error if transaction creation, signing, or serialization fails
     """
-    from hiero import (
+    from hiero_sdk_python import (
         TransferTransaction,
         AccountId as HederaAccountId,
         TokenId,

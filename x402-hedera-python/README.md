@@ -2,6 +2,14 @@
 
 Python implementation of the x402 Payment Protocol for Hedera Hashgraph.
 
+## Dependencies
+
+This package requires [hiero-sdk-python](https://github.com/hiero-ledger/hiero-sdk-python) for Hedera blockchain interactions.
+
+- **GitHub**: https://github.com/hiero-ledger/hiero-sdk-python
+- **PyPI**: https://pypi.org/project/hiero-sdk-python/
+- **Import name**: `hiero_sdk_python` (note: uses underscores, not hyphens)
+
 ## Overview
 
 This package provides Python bindings for implementing x402 payment flows on the Hedera network, supporting both native HBAR and HTS (Hedera Token Service) token payments.
@@ -28,7 +36,7 @@ pip install -e .
 
 ```python
 from x402_hedera import create_payment_header
-from hiero import AccountId, PrivateKey, Client
+from hiero_sdk_python import AccountId, PrivateKey, Client
 
 # Initialize Hedera client
 account_id = AccountId.from_string("0.0.123456")

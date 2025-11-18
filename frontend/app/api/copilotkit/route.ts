@@ -21,6 +21,8 @@ export async function POST(request: NextRequest) {
   const orchestratorUrl = process.env.ORCHESTRATOR_URL || "http://localhost:9000";
 
   // STEP 3: Wrap orchestrator with HttpAgent (AG-UI client)
+  // Note: 402 errors from the orchestrator will be caught and formatted by the A2A middleware
+  // The error message will contain "x402Version" and "accepts" which the orchestrator can detect
   const orchestrationAgent = new HttpAgent({ url: orchestratorUrl });
 
   // STEP 4: Create A2A Middleware Agent
@@ -42,6 +44,29 @@ export async function POST(request: NextRequest) {
     ],
     orchestrationAgent,
     instructions: `
+      **CRITICAL PAYMENT DETECTION RULE - READ THIS FIRST:**
+      When you call send_message_to_a2a_agent for LiquidityFinder, you MUST immediately check the tool result.
+      
+      **SUCCESS INDICATOR**: A successful liquidity response ALWAYS contains both:
+        - "type": "liquidity" (or '"type":"liquidity"')
+        - "results": [...] (or '"results":[')
+      
+      **402 DETECTION - STANDARD x402 FORMAT**:
+      The x402 protocol returns a standard format when payment is required:
+        - "x402Version": 1 (or "x402_version": 1)
+        - "error": "Payment required to access this resource..."
+        - "accepts": [...] (array of payment requirements)
+      
+      **402 DETECTION RULES**:
+      1. If result contains "x402Version" OR "x402_version" → 402 detected
+      2. If result contains "accepts" (especially as a JSON array) → 402 detected
+      3. If result contains "Payment required to access this resource" → 402 detected
+      4. If result does NOT contain BOTH "type": "liquidity" AND "results" → likely 402
+      5. If result is empty, null, undefined, or error-like → 402 detected
+      
+      If ANY 402 indicator is found OR the result is missing the success indicators, 
+      you MUST call gather_liquidity_payment immediately. This is MANDATORY.
+
       You are a DeFi orchestrator that coordinates specialized agents to fetch and aggregate on-chain balance, liquidity, and swap information across chains (Ethereum, Polygon, Hedera).
 
       AVAILABLE SPECIALIZED AGENTS:
@@ -127,28 +152,44 @@ export async function POST(request: NextRequest) {
          - Wait for the user to submit the complete requirements
          - Use the returned values for all subsequent agent calls
 
-         **For Liquidity Queries** (MANDATORY PAYMENT REQUIRED):
-         - **CRITICAL: Payment is ALWAYS required for liquidity queries - NO EXCEPTIONS**
-         - **STEP 1 - Payment Sign & Verify (MANDATORY FIRST STEP)**: 
-           * IMMEDIATELY when user asks for liquidity (ANY liquidity query), call 'gather_liquidity_payment' FIRST
-           * This includes queries like: "Get liquidity", "Find pools", "Show liquidity", "ETH/USDT", "HBAR/USDC", etc.
-           * DO NOT skip payment - it is required for ALL liquidity queries
+         **For Liquidity Queries** (PAYMENT REQUIRED ON DEMAND):
+         - **STEP 1 - Try Liquidity Query First**: 
+           * When user asks for liquidity, FIRST try calling LiquidityFinder directly
+           * Extract any mentioned details from the user's message (chain, token pair)
+           * Format: "Get liquidity for [token_pair]" or "Get liquidity on [chain]"
+           * Example: "Get liquidity for ETH/USDT", "Find liquidity pools for HBAR/USDC", "Get liquidity on Polygon"
+           * Call LiquidityFinder with the query
+         - **STEP 2 - CHECK FOR 402 IMMEDIATELY AFTER CALLING LIQUIDITYFINDER**:
+           * RIGHT AFTER you call send_message_to_a2a_agent for LiquidityFinder, you MUST check the tool result
+           * **CRITICAL**: A successful liquidity response ALWAYS contains "type": "liquidity" and a "results" array
+           * **402 DETECTION - CHECK IN THIS ORDER**:
+             1. **Is result empty/null/undefined?** → 402 detected, proceed to STEP 3
+             2. **Does result contain "x402Version" OR "x402_version"?** → 402 detected (standard x402 format), proceed to STEP 3
+             3. **Does result contain "accepts" (as JSON array)?** → 402 detected (standard x402 format), proceed to STEP 3
+             4. **Does result contain "Payment required to access this resource"?** → 402 detected, proceed to STEP 3
+             5. **Does result contain "402", "Payment Required", or "No X-PAYMENT"?** → 402 detected, proceed to STEP 3
+             6. **Does result contain "type": "liquidity" AND "results" array?** → Success, return to user
+             7. **If result doesn't have "type": "liquidity" and "results"** → 402 detected, proceed to STEP 3
+           * **IF 402 DETECTED**: Payment is required - IMMEDIATELY proceed to STEP 3
+           * **IF SUCCESS**: The result has "type": "liquidity" and "results" array - return it to the user
+           * **IMPORTANT**: Do not try to parse or understand the 402 response - just detect it and call gather_liquidity_payment
+         - **STEP 3 - IF YOU RECEIVE A 402 PAYMENT REQUIRED RESPONSE FROM LIQUIDITYFINDER**:
+           * A 402 response can appear as:
+             - HTTP status code 402
+             - Response containing "402", "Payment Required", "x402_version", "accepts", or "No X-PAYMENT header provided"
+             - JSON response with "x402_version" and "accepts" fields
+           * When you see ANY of these indicators, payment is required
+           * IMMEDIATELY call 'gather_liquidity_payment' to collect payment from the user
+           * DO NOT try to parse or understand the 402 response - just call gather_liquidity_payment immediately
            * The user must sign and verify payment (0.1 HBAR) to access liquidity data
            * Payment flow: Sign → Verify (settlement happens AFTER liquidity response)
            * Wait for payment verification to complete
-           * DO NOT proceed to next step until payment is verified
-         - **STEP 2 - Requirements (AFTER PAYMENT VERIFICATION)**: 
-           * ONLY after payment is verified, call 'gather_liquidity_requirements' to collect essential information
-           * Try to extract any mentioned details from the user's message (chain, token pair)
-           * Pass any extracted values as parameters to pre-fill the form:
-             * chain: Extract chain if mentioned (e.g., "hedera", "polygon") or default to "all"
-             * tokenPair: Extract token pair if mentioned (e.g., "HBAR/USDC", "MATIC/USDC", "ETH/USDT")
-           * Wait for the user to submit the complete requirements
-           * Use the returned values for all subsequent agent calls
-         - **STEP 3 - Agent Call (AFTER REQUIREMENTS)**: 
-           * ONLY after both payment verification AND requirements are complete, call LiquidityFinder
-           * Format: "Get liquidity for [token_pair]" or "Get liquidity on [chain]"
+           * DO NOT retry the liquidity query until payment is completed
+           * After payment is verified, retry the liquidity query with the same parameters
            * **NOTE**: Payment settlement will happen automatically AFTER the liquidity response is received
+         - **If payment is NOT required (no 402 response)**:
+           * Simply return the liquidity data to the user
+           * No payment form needed
 
          **For Swap Queries** (CRITICAL - Follow this exact sequence):
          
@@ -214,10 +255,11 @@ export async function POST(request: NextRequest) {
          - Present liquidity information in a clear, organized format
 
       2. **LiquidityFinder** - For all liquidity queries
-         - **CRITICAL: DO NOT CALL THIS AGENT DIRECTLY - Payment is required first!**
-         - **MANDATORY WORKFLOW**: Payment → Requirements → Agent Call
-         - **NEVER skip the payment step for liquidity queries**
-         - Use this agent ONLY after payment is completed and requirements are gathered
+         - **WORKFLOW**: Try agent call first → If 402 received, collect payment → Retry with payment
+         - Call LiquidityFinder directly when user asks for liquidity
+         - **CRITICAL**: If the tool result contains "402", "Payment Required", "x402_version", "accepts", or "No X-PAYMENT header provided", this is a 402 response
+         - **CRITICAL**: When you see a 402 response, IMMEDIATELY call 'gather_liquidity_payment' - do not try to understand or parse the response
+         - After payment is verified, retry the liquidity query
          - If user mentions a token pair (e.g., "ETH/USDT", "HBAR/USDC"), extract and normalize it
          - Format: "Get liquidity for [token_pair]" or "Get liquidity on [chain]"
          - Example queries: "Get liquidity for ETH/USDT", "Find liquidity pools for HBAR/USDC", "Get liquidity on Polygon"
@@ -256,19 +298,22 @@ export async function POST(request: NextRequest) {
 
       CRITICAL RULES (MUST FOLLOW IN ORDER):
       - **ALWAYS START by calling 'gather_balance_requirements' FIRST when user asks for balance information**
-      - **FOR LIQUIDITY QUERIES - MANDATORY 3-STEP PROCESS (NO EXCEPTIONS):**
-        1. **FIRST**: Call 'gather_liquidity_payment' - User signs and verifies payment (0.1 HBAR)
-        2. **SECOND**: After payment is verified, call 'gather_liquidity_requirements'
-        3. **THIRD**: After requirements are gathered, call LiquidityFinder
-        4. **FOURTH**: After liquidity response is received, payment settlement happens automatically
-        - **NEVER skip step 1 (payment) for liquidity queries**
-        - **NEVER call LiquidityFinder directly without payment verification**
-        - **NEVER call 'gather_liquidity_requirements' before payment is verified**
+      - **FOR LIQUIDITY QUERIES - ON-DEMAND PAYMENT WORKFLOW:**
+        1. **FIRST**: Try calling LiquidityFinder directly with the user's query using send_message_to_a2a_agent
+        2. **IMMEDIATELY AFTER CALLING**: Check the tool result - look at the actual text/string content returned
+        3. **402 DETECTION**: If the tool result contains ANY of these strings: "402", "Payment Required", "x402_version", "accepts", "No X-PAYMENT header provided", "Payment Required (402 ERROR)", or if the result is an error/empty/unexpected format
+        4. **IF 402 DETECTED**: IMMEDIATELY call 'gather_liquidity_payment' action - do not wait, do not analyze, just call it
+        5. **AFTER PAYMENT VERIFIED**: Retry the LiquidityFinder query with the same parameters
+        6. **AFTER LIQUIDITY RESPONSE**: Payment settlement happens automatically
+        - **CRITICAL**: You MUST check the tool result content immediately after calling send_message_to_a2a_agent for LiquidityFinder
+        - **CRITICAL**: If the result looks like an error, is empty, or contains payment-related keywords, treat it as a 402
+        - **ONLY call 'gather_liquidity_payment' if you detect a 402 response**
+        - **DO NOT call payment form by default - only when 402 is received**
         - **Payment settlement occurs AFTER liquidity data is returned to user**
       - **ALWAYS START by calling 'gather_swap_requirements' FIRST when user asks to swap tokens**
       - **ALWAYS START by calling 'gather_bridge_requirements' FIRST when user asks to bridge tokens**
       - For balance queries, always gather requirements before calling agents
-      - For liquidity queries, ALWAYS: payment → requirements → agent (in that exact order)
+      - For liquidity queries: Try agent call first → If 402 received, collect payment → Retry with payment
       - For swap queries, always gather requirements before calling agents
       - For bridge queries, always gather requirements before calling agents
       - Call tools/agents ONE AT A TIME - never make multiple tool calls simultaneously
@@ -285,6 +330,25 @@ export async function POST(request: NextRequest) {
       - **CRITICAL**: Do NOT try to parse JSON from tool results - the response is already formatted as text/JSON
       - **CRITICAL**: Maximum ONE call per agent per user request - never loop or retry
       - **CRITICAL**: When you see "Invalid JSON" warnings, these are just warnings - the actual response data is still available in the tool result
+      - **CRITICAL 402 PAYMENT DETECTION - MANDATORY CHECK**:
+        * After EVERY call to send_message_to_a2a_agent for LiquidityFinder, you MUST check the tool result
+        * **IMPORTANT**: The A2A middleware might return 402 responses as errors or empty results
+        * **402 DETECTION RULES - CHECK ALL OF THESE** (Standard x402 Format):
+          - **If result contains "x402Version" OR "x402_version"** → 402 detected (standard x402 format), call gather_liquidity_payment
+          - **If result contains "accepts" (as JSON array)** → 402 detected (standard x402 format), call gather_liquidity_payment
+          - **If result contains "Payment required to access this resource"** → 402 detected, call gather_liquidity_payment
+          - If result contains "402" → 402 detected, call gather_liquidity_payment
+          - If result contains "Payment Required" → 402 detected, call gather_liquidity_payment
+          - If result contains "No X-PAYMENT header provided" → 402 detected, call gather_liquidity_payment
+          - **If result is empty string, null, undefined, or "undefined"** → 402 detected, call gather_liquidity_payment
+          - **If result is an error message or exception** → 402 detected, call gather_liquidity_payment
+          - **If result doesn't contain "type": "liquidity" AND "results" array** → likely 402, call gather_liquidity_payment
+          - **If result looks like an HTTP error or status code** → 402 detected, call gather_liquidity_payment
+        * **CRITICAL**: If the tool result is NOT a valid liquidity JSON response with "type": "liquidity" and "results" array, treat it as a 402
+        * **ACTION**: When 402 is detected (by ANY of the above rules), IMMEDIATELY call gather_liquidity_payment - do not wait, do not analyze further
+        * **DO NOT**: Try to understand, parse, or explain the 402 response - just call gather_liquidity_payment
+        * **THIS CHECK IS MANDATORY** - you must do it after every LiquidityFinder call
+        * **REMEMBER**: A successful liquidity response ALWAYS has "type": "liquidity" and a "results" array - if these are missing, it's a 402
       - If an agent returns data (even partial), acknowledge it and present it to the user
       - If an agent returns an error message, show it to the user and explain what happened
       - Never call the same agent multiple times for the same query
@@ -295,11 +359,15 @@ export async function POST(request: NextRequest) {
       - "What's my HBAR balance for account 0.0.123456?" -> gather_balance_requirements with accountAddress: "0.0.123456", chain: "hedera"
       - "Get balance for 0x1234... on all chains" -> gather_balance_requirements with accountAddress: "0x1234...", chain: "all"
       - "Check USDC balance" -> gather_balance_requirements with tokenAddress: "USDC"
-      - "Get liquidity for HBAR/USDC" -> **FIRST**: gather_liquidity_payment, **THEN**: gather_liquidity_requirements, **THEN**: LiquidityFinder
-      - "Show me all pools on Hedera" -> **FIRST**: gather_liquidity_payment, **THEN**: gather_liquidity_requirements, **THEN**: LiquidityFinder
-      - "Get liquidity for ETH/USDT" -> **FIRST**: gather_liquidity_payment, **THEN**: gather_liquidity_requirements, **THEN**: LiquidityFinder
-      - "Find ETH USDT from different chain" -> **FIRST**: gather_liquidity_payment, **THEN**: gather_liquidity_requirements, **THEN**: LiquidityFinder
-      - "Find liquidity pools" -> **FIRST**: gather_liquidity_payment, **THEN**: gather_liquidity_requirements, **THEN**: LiquidityFinder
+      - **"Get liquidity for HBAR/USDC" EXAMPLE WORKFLOW**:
+        1. Call: send_message_to_a2a_agent with agentName: "LiquidityFinder", task: "Get liquidity for HBAR/USDC"
+        2. **CHECK RESULT**: Read the tool result text - if it contains "402", "Payment Required", "x402_version", "accepts", or is empty/error → 402 detected
+        3. **IF 402**: Call gather_liquidity_payment immediately
+        4. **AFTER PAYMENT**: Retry send_message_to_a2a_agent with same parameters
+      - "Show me all pools on Hedera" -> **FIRST**: Call LiquidityFinder directly, **CHECK RESULT FOR 402**, **IF 402**: gather_liquidity_payment, **THEN**: Retry LiquidityFinder
+      - "Get liquidity for ETH/USDT" -> **FIRST**: Call LiquidityFinder directly, **CHECK RESULT FOR 402**, **IF 402**: gather_liquidity_payment, **THEN**: Retry LiquidityFinder
+      - "Find ETH USDT from different chain" -> **FIRST**: Call LiquidityFinder directly, **CHECK RESULT FOR 402**, **IF 402**: gather_liquidity_payment, **THEN**: Retry LiquidityFinder
+      - "Find liquidity pools" -> **FIRST**: Call LiquidityFinder directly, **CHECK RESULT FOR 402**, **IF 402**: gather_liquidity_payment, **THEN**: Retry LiquidityFinder
       - "Swap 0.01 HBAR to USDC" -> gather_swap_requirements, then Swap Agent
       - "I want to swap USDC for HBAR on Hedera" -> gather_swap_requirements, then Swap Agent
       - "Swap 50 MATIC to USDC on Polygon" -> gather_swap_requirements, then Swap Agent
@@ -334,5 +402,99 @@ export async function POST(request: NextRequest) {
     endpoint: "/api/copilotkit",
   });
 
-  return handleRequest(request);
+  try {
+    return await handleRequest(request);
+  } catch (error: any) {
+    console.log(error);
+    // Check if this is a 402 Payment Required error
+    const is402 = 
+      error?.status === 402 ||
+      error?.response?.status === 402 ||
+      error?.httpStatus === 402 ||
+      error?.message?.includes("402") ||
+      error?.code === 402 ||
+      error?.message?.includes("HTTP Status: 402");
+
+    if (is402) {
+      console.log("💰 402 Payment Required detected in copilotkit route");
+      console.log("   Error details:", {
+        status: error?.status,
+        httpStatus: error?.httpStatus,
+        message: error?.message,
+        response: error?.response,
+      });
+      
+      // Try to extract payment requirements from error
+      let paymentData = null;
+      
+      // Try error.response.data
+      if (error?.response?.data) {
+        try {
+          const data = typeof error.response.data === 'string' 
+            ? JSON.parse(error.response.data) 
+            : error.response.data;
+          
+          if (data?.x402Version || data?.x402_version || data?.accepts) {
+            paymentData = {
+              x402Version: data.x402Version || data.x402_version || 1,
+              accepts: data.accepts || [],
+              error: data.error || "Payment required to access this resource",
+            };
+            console.log("   ✅ Extracted payment requirements from error.response.data");
+          }
+        } catch (e) {
+          console.log("   ⚠️ Could not parse error.response.data:", e);
+        }
+      }
+      
+      // Try error.data (alternative location)
+      if (!paymentData && error?.data) {
+        try {
+          const data = typeof error.data === 'string' 
+            ? JSON.parse(error.data) 
+            : error.data;
+          
+          if (data?.x402Version || data?.x402_version || data?.accepts) {
+            paymentData = {
+              x402Version: data.x402Version || data.x402_version || 1,
+              accepts: data.accepts || [],
+              error: data.error || "Payment required to access this resource",
+            };
+            console.log("   ✅ Extracted payment requirements from error.data");
+          }
+        } catch (e) {
+          console.log("   ⚠️ Could not parse error.data:", e);
+        }
+      }
+      
+      // Format error response with payment requirements for orchestrator to detect
+      // The orchestrator instructions tell it to look for "x402Version", "accepts", "402", "Payment Required"
+      const x402Response = paymentData 
+        ? JSON.stringify({
+            x402Version: paymentData.x402Version,
+            error: paymentData.error,
+            accepts: paymentData.accepts,
+          })
+        : JSON.stringify({
+            x402Version: 1,
+            error: "Payment required to access this resource. Please provide a valid X-PAYMENT header.",
+            accepts: [],
+          });
+      
+      console.log("   📝 Formatted x402 response for orchestrator:", x402Response.substring(0, 200));
+      
+      // Return a formatted error that the orchestrator can detect
+      // The error message contains "x402Version" and "accepts" which the orchestrator will detect
+      const formattedError = new Error(
+        `402 Payment Required. Payment required to access this resource. x402Version: ${paymentData?.x402Version || 1}. ${x402Response}`
+      );
+      (formattedError as any).status = 402;
+      (formattedError as any).paymentData = paymentData;
+      (formattedError as any).x402Response = x402Response;
+      throw formattedError;
+    }
+    
+    // Re-throw other errors
+    throw error;
+  }
 }

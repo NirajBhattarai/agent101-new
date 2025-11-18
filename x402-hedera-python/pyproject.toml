@@ -24,16 +24,22 @@ classifiers = [
 ]
 
 dependencies = [
-    # Hedera SDK
+    # Hedera SDK (required for clients and payment creation)
     "hiero-sdk-python>=0.1.7,<0.2.0",
     
     # Data Validation & Settings
     "pydantic>=2.5.0",
     "pydantic-settings>=2.1.0",
+    "typing-extensions>=4.8.0",
     
     # HTTP Client
     "httpx>=0.26.0",
     "requests>=2.32.3",
+    
+    # Web Frameworks (optional, but needed for middleware)
+    "fastapi>=0.115.0",
+    "flask>=3.0.0",
+    "starlette>=0.27.0",  # Required for Starlette middleware
     
     # Encoding utilities
     "base58>=2.1.0",
@@ -54,7 +60,7 @@ dev = [
 ]
 
 [tool.setuptools]
-packages = ["x402_hedera"]
+packages = {find = {where = ["src"]}}
 
 [tool.setuptools.package-dir]
 "" = "src"

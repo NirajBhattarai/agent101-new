@@ -4,6 +4,8 @@ Multi-Chain Liquidity Agent Server (ADK + A2A Protocol)
 Starts the Multi-Chain Liquidity Agent as an A2A Protocol server.
 """
 
+import json
+import logging
 import os
 import warnings
 
@@ -23,13 +25,39 @@ from starlette.responses import Response
 
 from .executor import LiquidityExecutor  # noqa: E402
 
+# Import x402 middleware directly from module to avoid __init__.py clients import
+from x402_hedera.starlette.middleware import x402PaymentMiddleware  # noqa: E402
 
-# Define custom middleware
+# Configure logger
+logger = logging.getLogger("multichain_liquidity")
+logger.setLevel(logging.INFO)
+
+# Create console handler if not exists
+if not logger.handlers:
+    handler = logging.StreamHandler()
+    handler.setLevel(logging.INFO)
+    formatter = logging.Formatter(
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+
+
+# Define custom logging middleware
 class CustomLoggingMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
-        print(f"Request URL: {request.url}")
+        logger.info(f"📥 Request: {request.method} {request.url.path}")
         response = await call_next(request)
-        print(f"Response status: {response.status_code}")
+        logger.info(f"📤 Response: {response.status_code}")
+        
+        # Log 402 responses for debugging
+        if response.status_code == 402:
+            logger.warning("💰 402 Payment Required response detected")
+            logger.warning(f"   Path: {request.url.path}")
+            logger.warning(f"   Method: {request.method}")
+            logger.warning(f"   Content-Type: {response.headers.get('content-type', 'N/A')}")
+        
         return response
 
 
@@ -105,11 +133,68 @@ def main():
     )
 
     app = server.build()
+    logger.info("Building A2A Starlette application")
+    logger.info(f"Agent card URL: {cardUrl}")
+    
     app.add_middleware(CustomLoggingMiddleware)
+    logger.info("Added CustomLoggingMiddleware")
+    
+    # Add x402 payment middleware if configured
+    pay_to_address = "0.0.123456" #os.getenv("X402_PAY_TO_ADDRESS") 
+    payment_price = "$0.01" #os.getenv("X402_PAYMENT_PRICE", "$0.01")
+    payment_enabled = True #os.getenv("X402_PAYMENT_ENABLED", "false").lower() == "true"
+    network = os.getenv("X402_NETWORK", "hedera-testnet")
+    
+    logger.info("Checking x402 payment configuration")
+    logger.debug(f"X402_PAYMENT_ENABLED: {payment_enabled}")
+    logger.debug(f"X402_PAY_TO_ADDRESS: {pay_to_address}")
+    logger.debug(f"X402_PAYMENT_PRICE: {payment_price}")
+    logger.debug(f"X402_NETWORK: {network}")
+    
+    if payment_enabled and pay_to_address:
+        # Define allowed paths that bypass payment (e.g., health checks, agent card)
+        # NOTE: POST to / (task execution) is protected - requires payment via X-PAYMENT header
+        # GET to / and /.well-known/agent.json are free for agent card discovery
+        allowed_paths = [
+            "/health",
+            "/healthz",
+            "/.well-known/agent.json",  # Agent card JSON (GET)
+            "/.well-known/agent-card.json",  # Agent card JSON (new format)
+            # POST to / (task execution) is protected - requires payment
+            # GET to / (agent card) is also protected but browser requests show paywall
+        ]
+        
+        app.add_middleware(
+            x402PaymentMiddleware,
+            price=payment_price,
+            pay_to_address=pay_to_address,
+            path="*",  # Protect all paths, except those in allowed_paths
+            description="Multi-Chain Liquidity Agent API access",
+            network=network,
+            allowed_paths=allowed_paths,  # These paths bypass payment
+        )
+        logger.info("💰 x402 Payment middleware enabled")
+        logger.info(f"   Pay to: {pay_to_address}")
+        logger.info(f"   Price: {payment_price}")
+        logger.info(f"   Network: {network}")
+        logger.info(f"   Protected path: * (all paths)")
+        logger.info(f"   Allowed paths (bypass payment): {allowed_paths}")
+        logger.info(f"   NOTE: POST to / (task execution) requires payment")
+        logger.info(f"   NOTE: GET to /.well-known/agent.json is free for discovery")
+    else:
+        if not payment_enabled:
+            logger.info("💡 x402 Payment middleware disabled (X402_PAYMENT_ENABLED not set to 'true')")
+        elif not pay_to_address:
+            logger.warning("⚠️  x402 Payment middleware disabled (X402_PAY_TO_ADDRESS not configured)")
 
-    print(f"💧 Starting Multi-Chain Liquidity Agent (ADK + A2A) on http://0.0.0.0:{port}")
-    print(f"   Agent: {public_agent_card.name}")
-    print(f"   Description: {public_agent_card.description}")
+    logger.info("=" * 60)
+    logger.info(f"💧 Starting Multi-Chain Liquidity Agent (ADK + A2A)")
+    logger.info(f"   URL: http://0.0.0.0:{port}")
+    logger.info(f"   Agent: {public_agent_card.name}")
+    logger.info(f"   Description: {public_agent_card.description}")
+    logger.info(f"   Version: {public_agent_card.version}")
+    logger.info(f"   Skills: {len(public_agent_card.skills)}")
+    logger.info("=" * 60)
     uvicorn.run(app, host="0.0.0.0", port=port)
 
 

@@ -44,6 +44,9 @@ class PaymentRequirements(BaseModel):
     resource: Optional[str] = Field(None, description="Resource identifier")
     pay_to: Optional[str] = Field(None, alias="payTo", description="Recipient account ID")
     asset: Optional[str] = Field(None, description="Asset identifier (0.0.0 for HBAR, token ID for HTS)")
+    max_timeout_seconds: int = Field(60, alias="maxTimeoutSeconds", description="Maximum timeout in seconds")
+    description: str = Field("", description="Description of the resource")
+    mime_type: str = Field("", alias="mimeType", description="MIME type of the resource")
     extra: Optional[Dict[str, Any]] = Field(None, description="Extra payment requirements")
 
     model_config = ConfigDict(
@@ -51,6 +54,16 @@ class PaymentRequirements(BaseModel):
         populate_by_name=True,
         from_attributes=True,
     )
+
+    @field_validator("max_amount_required")
+    def validate_max_amount_required(cls, v):
+        try:
+            int(v)
+        except ValueError:
+            raise ValueError(
+                "max_amount_required must be an integer encoded as a string"
+            )
+        return v
 
 
 class VerifyResponse(BaseModel):
@@ -71,7 +84,22 @@ class SettleResponse(BaseModel):
 
     success: bool = Field(..., description="Whether settlement was successful")
     error: Optional[str] = Field(None, description="Error message if settlement failed")
+    error_reason: Optional[str] = Field(None, alias="errorReason", description="Detailed error reason")
     transaction_id: Optional[str] = Field(None, alias="transactionId", description="Settled transaction ID")
+
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+        from_attributes=True,
+    )
+
+
+class x402PaymentRequiredResponse(BaseModel):
+    """Response returned by a server as JSON alongside a 402 response code."""
+
+    x402_version: int = Field(..., alias="x402Version", description="x402 protocol version")
+    accepts: list[PaymentRequirements] = Field(..., description="List of accepted payment requirements")
+    error: str = Field("", description="Error message if payment is invalid")
 
     model_config = ConfigDict(
         alias_generator=to_camel,

@@ -36,6 +36,31 @@ def _get_session_id(context: RequestContext) -> str:
     return getattr(context, "context_id", DEFAULT_SESSION_ID)
 
 
+def _extract_and_print_x_payment_header(context: RequestContext) -> None:
+    """Extract and print X-PAYMENT header value from Hedera payment."""
+    x_payment_header = None
+    
+    if hasattr(context, "request") and context.request:
+        if hasattr(context.request, "headers"):
+            headers = context.request.headers
+            if isinstance(headers, dict):
+                x_payment_header = headers.get("X-PAYMENT") or headers.get("x-payment")
+            elif isinstance(headers, list):
+                for key, value in headers:
+                    if isinstance(key, bytes):
+                        key = key.decode('utf-8')
+                    if isinstance(value, bytes):
+                        value = value.decode('utf-8')
+                    if key.lower() == "x-payment":
+                        x_payment_header = value
+                        break
+    
+    if x_payment_header:
+        print(f"💰 X-PAYMENT Header Value (Hedera): {x_payment_header}")
+    else:
+        print("⚠️  No X-PAYMENT header found in request")
+
+
 def _build_execution_error_response(error: Exception) -> str:
     """Build response for execution error."""
     return json.dumps(
@@ -83,6 +108,7 @@ class LiquidityExecutor(AgentExecutor):
         print(
             f"   Timestamp: {context.get_timestamp() if hasattr(context, 'get_timestamp') else 'N/A'}"
         )
+        _extract_and_print_x_payment_header(context)
         print()
 
         try:

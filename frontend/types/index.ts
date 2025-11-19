@@ -612,6 +612,7 @@ export interface DeFiChatProps {
   onPoolCalculatorUpdate?: (data: PoolCalculatorData | null) => void;
   onMarketInsightsUpdate?: (data: MarketInsightsData | null) => void;
   onBridgeUpdate?: (data: BridgeData | null) => void;
+  setHeaders: (headers: Record<string, string>) => void;
 }
 
 /**

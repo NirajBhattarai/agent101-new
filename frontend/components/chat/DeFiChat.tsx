@@ -46,7 +46,10 @@ const ChatInner = ({
   onPoolCalculatorUpdate,
   onMarketInsightsUpdate,
   onBridgeUpdate,
-}: DeFiChatProps) => {
+  setHeaders,
+  }: DeFiChatProps) => {
+
+  
   const { visibleMessages } = useCopilotChat();
 
   // Extract structured data from A2A agent responses
@@ -375,7 +378,12 @@ const ChatInner = ({
       },
     ],
     renderAndWaitForResponse: ({ args, respond }) => {
-      return <BalanceRequirementsForm args={args} respond={respond} />;
+      return <BalanceRequirementsForm args={args} respond={respond} onPaymentComplete={(paymentProof) => {
+        setHeaders({
+          'X-PAYMENT': paymentProof,
+        });
+        console.log("✅ Balance payment proof set:", paymentProof);
+      }} />;
     },
   });
 
@@ -397,7 +405,10 @@ const ChatInner = ({
           args={args}
           respond={respond}
           onPaymentComplete={(paymentProof) => {
-            console.log("✅ Payment completed:", paymentProof);
+            setHeaders({
+              'X-PAYMENT': paymentProof,
+            });
+            console.log("✅ Liquidity payment proof set:", paymentProof);
           }}
         />
       );
@@ -576,8 +587,9 @@ export default function DeFiChat({
   onMarketInsightsUpdate,
   onBridgeUpdate,
 }: DeFiChatProps) {
+  const [headers, setHeaders] = useState<Record<string, string>>({});
   return (
-    <CopilotKit runtimeUrl="/api/copilotkit" showDevConsole={false} agent="a2a_chat">
+    <CopilotKit runtimeUrl="/api/copilotkit" showDevConsole={false} agent="a2a_chat" headers={headers}>
       <ChatInner
         onTokenResearchUpdate={onTokenResearchUpdate}
         onBalanceUpdate={onBalanceUpdate}
@@ -587,6 +599,7 @@ export default function DeFiChat({
         onPoolCalculatorUpdate={onPoolCalculatorUpdate}
         onMarketInsightsUpdate={onMarketInsightsUpdate}
         onBridgeUpdate={onBridgeUpdate}
+        setHeaders={setHeaders}
       />
     </CopilotKit>
   );

@@ -28,6 +28,7 @@ export const LiquidityRequirementsForm: React.FC<LiquidityRequirementsFormProps>
     }
   }
 
+
   const [chain, setChain] = useState("all");
   const [tokenPair, setTokenPair] = useState("");
   const [submitted, setSubmitted] = useState(false);

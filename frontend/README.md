@@ -13,7 +13,7 @@ The frontend follows a **component-based architecture** with clear separation be
 │  │  Pages: /, /chat, /swap, /payment                      │  │
 │  └──────────────────────────────────────────────────────┘  │
 │  ┌──────────────────────────────────────────────────────┐  │
-│  │  API Routes: /api/orchestrator, /api/facilitator      │  │
+│  │  API Routes: /api/copilotkit, /api/facilitator       │  │
 │  └──────────────────────────────────────────────────────┘  │
 └───────────┬───────────┬───────────┬───────────┬─────────────┘
             │           │           │           │
@@ -289,16 +289,6 @@ Main CopilotKit route that:
 - Handles agent responses
 - Parses structured data for feature cards
 - Updates component state
-
-### `/api/orchestrator`
-
-**Handler**: `app/api/orchestrator/route.ts`
-
-Direct proxy to orchestrator agent:
-
-- Accepts JSON-RPC requests
-- Forwards to orchestrator at `http://localhost:9000/`
-- Returns orchestrator responses
 
 ### `/api/facilitator/*`
 

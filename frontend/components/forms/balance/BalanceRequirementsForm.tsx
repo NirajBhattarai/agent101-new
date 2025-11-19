@@ -15,11 +15,13 @@ import { filterTokens, validateBalanceForm } from "./utils";
 interface BalanceRequirementsFormProps {
   args: any;
   respond: any;
+  onPaymentComplete?: (paymentProof: string) => void;
 }
 
 export const BalanceRequirementsForm: React.FC<BalanceRequirementsFormProps> = ({
   args,
   respond,
+  onPaymentComplete,
 }) => {
   let parsedArgs = args;
   if (typeof args === "string") {
@@ -97,6 +99,8 @@ export const BalanceRequirementsForm: React.FC<BalanceRequirementsFormProps> = (
     }
 
     setSubmitted(true);
+    // Payment proof should be set before calling respond
+    // If onPaymentComplete was called with a payment proof, headers are already set
     respond?.({
       accountAddress: accountAddress.trim(),
       chain,

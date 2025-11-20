@@ -319,32 +319,17 @@ export const LiquidityPaymentForm: React.FC<LiquidityPaymentFormProps> = ({
       const signedTransactionBytes = Buffer.from(signedTransaction.toBytes()).toString("base64");
       console.log("✅ Transaction signed with private key");
 
-      // Step 1: Create payment payload via API
+      // Create payment payload directly on frontend (no API call needed)
       setPaymentStatus("creating");
-      const createPayloadBody: any = {
-        paymentRequirements,
-        payerAccountId,
-        transactionBytes: signedTransactionBytes,
-        transactionId,
-        payerPrivateKey: privateKeyToUse,
+      const paymentPayload: PaymentPayload = {
+        x402Version: 1,
+        scheme: paymentRequirements.scheme,
+        network: paymentRequirements.network,
+        payload: {
+          transaction: signedTransactionBytes,
+        },
       };
-
-      const createPayloadResponse = await fetch("/api/facilitator/create-payload", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(createPayloadBody),
-      });
-
-      debugger;
-
-      if (!createPayloadResponse.ok) {
-        const errorData = await createPayloadResponse.json();
-        throw new Error(errorData.error || "Failed to create payment payload");
-      }
-
-      const responseData = await createPayloadResponse.json();
-      const paymentPayload: PaymentPayload = responseData.paymentPayload;
-      console.log("✅ Payment payload created");
+      console.log("✅ Payment payload created on frontend");
 
       // Step 2: Verify payment
       setPaymentStatus("verifying");

@@ -21,11 +21,10 @@ export async function POST(request: NextRequest) {
   const orchestratorUrl = process.env.ORCHESTRATOR_URL || "http://localhost:9000";
 
   // STEP 3: Extract X-PAYMENT header and wrap orchestrator with HttpAgent (AG-UI client)
-  const xPaymentHeader = request.headers.get("X-PAYMENT") || request.headers.get("x-payment")|| "testing";
+  const xPaymentHeader = request.headers.get("X-PAYMENT") || request.headers.get("x-payment");
   const orchestrationAgent = new HttpAgent({ 
     url: orchestratorUrl, 
-    // headers: xPaymentHeader ? { 'X-PAYMENT': xPaymentHeader } : {} 
-    headers: { 'X-PAYMENT': "testing" }
+    headers: xPaymentHeader ? { 'X-PAYMENT': xPaymentHeader } : {} 
   });
 
   // STEP 4: Create A2A Middleware Agent
@@ -138,7 +137,7 @@ export async function POST(request: NextRequest) {
          **For Liquidity Queries** (MANDATORY PAYMENT REQUIRED):
          - **CRITICAL: Payment is ALWAYS required for liquidity queries - NO EXCEPTIONS**
          - **STEP 1 - Payment Sign & Verify (MANDATORY FIRST STEP)**: 
-           * IMMEDIATELY when user asks for liquidity (ANY liquidity query), call 'gather_liquidity_payment' FIRST
+           * IMMEDIATELY when user asks for liquidity (ANY liquidity query), call 'gather_payment' FIRST
            * This includes queries like: "Get liquidity", "Find pools", "Show liquidity", "ETH/USDT", "HBAR/USDC", etc.
            * DO NOT skip payment - it is required for ALL liquidity queries
            * The user must sign and verify payment (0.1 HBAR) to access liquidity data
@@ -263,22 +262,44 @@ export async function POST(request: NextRequest) {
          - **CRITICAL RULE**: DO NOT call Bridge Agent again after getting options - the frontend handles everything
 
       CRITICAL RULES (MUST FOLLOW IN ORDER):
-      - **ALWAYS START by calling 'gather_balance_requirements' FIRST when user asks for balance information**
+      - **PAYMENT IS MANDATORY FOR ALL FIRST REQUESTS (NO EXCEPTIONS)**:
+        * Before processing ANY request (balance, liquidity, swap, sentiment, trading, token research, bridge)
+        * Check if payment_required flag is true in request state
+        * If payment_required: true → IMMEDIATELY call 'gather_payment' FIRST
+        * DO NOT call any other tool (gather_balance_requirements, gather_swap_requirements, etc.) until payment is completed
+        * After payment is completed → Proceed with the specific workflow for that request type
+      
+      - **FOR BALANCE QUERIES**:
+        1. **FIRST**: Check payment_required - if true, call 'gather_payment' FIRST
+        2. **SECOND**: After payment (if required), call 'gather_balance_requirements'
+        3. **THIRD**: After requirements are gathered, call Balance Agent
+      
       - **FOR LIQUIDITY QUERIES - MANDATORY 3-STEP PROCESS (NO EXCEPTIONS):**
-        1. **FIRST**: Call 'gather_liquidity_payment' - User signs and verifies payment (0.1 HBAR)
-        2. **SECOND**: After payment is verified, call 'gather_liquidity_requirements'
+        1. **FIRST**: Check payment_required - if true, call 'gather_payment' FIRST
+        2. **SECOND**: After payment (if required), call 'gather_liquidity_requirements'
         3. **THIRD**: After requirements are gathered, call LiquidityFinder
         4. **FOURTH**: After liquidity response is received, payment settlement happens automatically
-        - **NEVER skip step 1 (payment) for liquidity queries**
-        - **NEVER call LiquidityFinder directly without payment verification**
-        - **NEVER call 'gather_liquidity_requirements' before payment is verified**
+        - **NEVER skip payment step if payment_required: true**
+        - **NEVER call LiquidityFinder directly without payment verification (if required)**
+        - **NEVER call 'gather_liquidity_requirements' before payment is verified (if required)**
         - **Payment settlement occurs AFTER liquidity data is returned to user**
-      - **ALWAYS START by calling 'gather_swap_requirements' FIRST when user asks to swap tokens**
-      - **ALWAYS START by calling 'gather_bridge_requirements' FIRST when user asks to bridge tokens**
-      - For balance queries, always gather requirements before calling agents
-      - For liquidity queries, ALWAYS: payment → requirements → agent (in that exact order)
-      - For swap queries, always gather requirements before calling agents
-      - For bridge queries, always gather requirements before calling agents
+      
+      - **FOR SWAP QUERIES**:
+        1. **FIRST**: Check payment_required - if true, call 'gather_payment' FIRST
+        2. **SECOND**: After payment (if required), call 'gather_swap_requirements'
+        3. **THIRD**: After requirements are gathered, follow swap workflow (balance check → liquidity check → swap)
+      
+      - **FOR BRIDGE QUERIES**:
+        1. **FIRST**: Check payment_required - if true, call 'gather_payment' FIRST
+        2. **SECOND**: After payment (if required), call 'gather_bridge_requirements'
+        3. **THIRD**: After requirements are gathered, call Bridge Agent
+      
+      - **FOR ALL OTHER QUERIES** (sentiment, trading, token research):
+        1. **FIRST**: Check payment_required - if true, call 'gather_payment' FIRST
+        2. **SECOND**: After payment (if required), proceed with the specific agent call
+      
+      - **GENERAL RULE**: Payment → Requirements → Agent (in that exact order for first requests)
+      - **SUBSEQUENT REQUESTS**: If payment_required is false/missing, skip payment and proceed directly
       - Call tools/agents ONE AT A TIME - never make multiple tool calls simultaneously
       - After making a tool call, WAIT for the result before making the next call
       - Pass information from gathered requirements to subsequent agent calls
@@ -298,22 +319,22 @@ export async function POST(request: NextRequest) {
       - Never call the same agent multiple times for the same query
       - Tool results may contain JSON strings - use them directly without additional parsing attempts
 
-      REQUEST EXTRACTION EXAMPLES:
-      - "Show me my balance on Polygon" -> gather_balance_requirements with chain: "polygon"
-      - "What's my HBAR balance for account 0.0.123456?" -> gather_balance_requirements with accountAddress: "0.0.123456", chain: "hedera"
-      - "Get balance for 0x1234... on all chains" -> gather_balance_requirements with accountAddress: "0x1234...", chain: "all"
-      - "Check USDC balance" -> gather_balance_requirements with tokenAddress: "USDC"
-      - "Get liquidity for HBAR/USDC" -> **FIRST**: gather_liquidity_payment, **THEN**: gather_liquidity_requirements, **THEN**: LiquidityFinder
-      - "Show me all pools on Hedera" -> **FIRST**: gather_liquidity_payment, **THEN**: gather_liquidity_requirements, **THEN**: LiquidityFinder
-      - "Get liquidity for ETH/USDT" -> **FIRST**: gather_liquidity_payment, **THEN**: gather_liquidity_requirements, **THEN**: LiquidityFinder
-      - "Find ETH USDT from different chain" -> **FIRST**: gather_liquidity_payment, **THEN**: gather_liquidity_requirements, **THEN**: LiquidityFinder
-      - "Find liquidity pools" -> **FIRST**: gather_liquidity_payment, **THEN**: gather_liquidity_requirements, **THEN**: LiquidityFinder
-      - "Swap 0.01 HBAR to USDC" -> gather_swap_requirements, then Swap Agent
-      - "I want to swap USDC for HBAR on Hedera" -> gather_swap_requirements, then Swap Agent
-      - "Swap 50 MATIC to USDC on Polygon" -> gather_swap_requirements, then Swap Agent
-      - "Bridge 100 USDC from Hedera to Polygon" -> gather_bridge_requirements, then Bridge Agent (ONCE)
-      - "I want to bridge USDT from Polygon to Hedera" -> gather_bridge_requirements, then Bridge Agent (ONCE)
-      - "Bridge 50 USDC from Hedera to Polygon for account 0.0.123456" -> gather_bridge_requirements, then Bridge Agent (ONCE)
+      REQUEST EXTRACTION EXAMPLES (FIRST REQUEST = PAYMENT REQUIRED FIRST):
+      - "Show me my balance on Polygon" -> **FIRST**: gather_payment (if payment_required: true), **THEN**: gather_balance_requirements with chain: "polygon"
+      - "What's my HBAR balance for account 0.0.123456?" -> **FIRST**: gather_payment (if payment_required: true), **THEN**: gather_balance_requirements with accountAddress: "0.0.123456", chain: "hedera"
+      - "Get balance for 0x1234... on all chains" -> **FIRST**: gather_payment (if payment_required: true), **THEN**: gather_balance_requirements with accountAddress: "0x1234...", chain: "all"
+      - "Check USDC balance" -> **FIRST**: gather_payment (if payment_required: true), **THEN**: gather_balance_requirements with tokenAddress: "USDC"
+      - "Get liquidity for HBAR/USDC" -> **FIRST**: gather_payment (if payment_required: true), **THEN**: gather_liquidity_requirements, **THEN**: LiquidityFinder
+      - "Show me all pools on Hedera" -> **FIRST**: gather_payment (if payment_required: true), **THEN**: gather_liquidity_requirements, **THEN**: LiquidityFinder
+      - "Get liquidity for ETH/USDT" -> **FIRST**: gather_payment (if payment_required: true), **THEN**: gather_liquidity_requirements, **THEN**: LiquidityFinder
+      - "Find ETH USDT from different chain" -> **FIRST**: gather_payment (if payment_required: true), **THEN**: gather_liquidity_requirements, **THEN**: LiquidityFinder
+      - "Find liquidity pools" -> **FIRST**: gather_payment (if payment_required: true), **THEN**: gather_liquidity_requirements, **THEN**: LiquidityFinder
+      - "Swap 0.01 HBAR to USDC" -> **FIRST**: gather_payment (if payment_required: true), **THEN**: gather_swap_requirements, then Swap Agent
+      - "I want to swap USDC for HBAR on Hedera" -> **FIRST**: gather_payment (if payment_required: true), **THEN**: gather_swap_requirements, then Swap Agent
+      - "Swap 50 MATIC to USDC on Polygon" -> **FIRST**: gather_payment (if payment_required: true), **THEN**: gather_swap_requirements, then Swap Agent
+      - "Bridge 100 USDC from Hedera to Polygon" -> **FIRST**: gather_payment (if payment_required: true), **THEN**: gather_bridge_requirements, then Bridge Agent (ONCE)
+      - "I want to bridge USDT from Polygon to Hedera" -> **FIRST**: gather_payment (if payment_required: true), **THEN**: gather_bridge_requirements, then Bridge Agent (ONCE)
+      - "Bridge 50 USDC from Hedera to Polygon for account 0.0.123456" -> **FIRST**: gather_payment (if payment_required: true), **THEN**: gather_bridge_requirements, then Bridge Agent (ONCE)
       - "confirm bridge" or "execute bridge" -> DO NOT call Bridge Agent, just acknowledge (frontend handles execution)
       - "bridge with EtaBridge" -> DO NOT call Bridge Agent, just acknowledge (frontend handles execution)
 

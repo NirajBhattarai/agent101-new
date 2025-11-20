@@ -387,15 +387,15 @@ const ChatInner = ({
     },
   });
 
-  // Register HITL liquidity payment form (collects payment before liquidity query)
+  // Register HITL payment form (collects payment before any service access)
   useCopilotAction({
-    name: "gather_liquidity_payment",
-    description: "Collect x402 payment from user before accessing liquidity data",
+    name: "gather_payment",
+    description: "Collect x402 payment from user before accessing any service (required for all requests)",
     parameters: [
       {
         name: "payerAccountId",
         type: "string",
-        description: "The Hedera account ID that will pay for the liquidity query",
+        description: "The Hedera account ID that will pay for the service",
         required: false,
       },
     ],
@@ -408,7 +408,7 @@ const ChatInner = ({
             setHeaders({
               'X-PAYMENT': paymentProof,
             });
-            console.log("✅ Liquidity payment proof set:", paymentProof);
+            console.log("✅ Payment proof set:", paymentProof);
           }}
         />
       );

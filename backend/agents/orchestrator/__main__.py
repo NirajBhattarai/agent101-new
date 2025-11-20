@@ -32,6 +32,7 @@ except ImportError:
 from .agent import build_adk_orchestrator_agent  # noqa: E402
 from .core.constants import DEFAULT_PORT  # noqa: E402
 from .core.logger import log_agent_message, log_error, log_request, log_response  # noqa: E402
+from .core.payment_verifier import PaymentVerifier, PaymentVerificationError  # noqa: E402
 
 
 class PaymentTrackingMiddleware:
@@ -40,7 +41,8 @@ class PaymentTrackingMiddleware:
     def __init__(self, app: ASGIApp):
         self.app = app
         self.paid_sessions = set()  # Track sessions that have paid
-        print("✅ PaymentTrackingMiddleware initialized")
+        self.payment_verifier = PaymentVerifier()  # Initialize payment verifier
+        print("✅ PaymentTrackingMiddleware initialized with payment verification")
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         """ASGI application callable that tracks payment and injects status."""
@@ -98,10 +100,44 @@ class PaymentTrackingMiddleware:
                 pass
 
         # Check payment status
-        is_valid_payment = (
-            x_payment_header and x_payment_header != "testing" and len(x_payment_header) > 10
-        )
         is_session_paid = session_id in self.paid_sessions if session_id else False
+        is_valid_payment = False
+        payment_verification_result = None
+
+        # If X-PAYMENT header is present, verify it
+        if x_payment_header and x_payment_header != "testing" and len(x_payment_header) > 10:
+            # Define payment requirements (should match what's sent to frontend)
+            payment_requirements = {
+                "scheme": "exact",
+                "network": "hedera-testnet",
+                "maxAmountRequired": "10000000",  # 0.1 HBAR in tinybars
+                "asset": "0.0.0",  # HBAR
+                "payTo": os.getenv("HEDERA_FACILITATOR_ACCOUNT_ID", "0.0.0"),
+                "resource": "agent101-orchestrator",
+                "description": "Payment required for DeFi agent services",
+                "mimeType": "application/json",
+                "outputSchema": None,
+                "maxTimeoutSeconds": 60,
+                "extra": {
+                    "feePayer": os.getenv("HEDERA_FACILITATOR_ACCOUNT_ID", "0.0.0"),
+                },
+            }
+
+            # Verify payment
+            try:
+                payment_verification_result = self.payment_verifier.verify_payment_header(
+                    x_payment_header, payment_requirements
+                )
+                is_valid_payment = payment_verification_result.get("isValid", False)
+
+                if is_valid_payment:
+                    print("   ✅ Payment verification: VALID")
+                else:
+                    invalid_reason = payment_verification_result.get("invalidReason", "unknown")
+                    print(f"   ❌ Payment verification: INVALID - {invalid_reason}")
+            except Exception as e:
+                print(f"   ⚠️  Payment verification error: {e}")
+                is_valid_payment = False
 
         print("=" * 80)
         print(f"💰 PAYMENT TRACKING - {method} {path}")
@@ -109,17 +145,24 @@ class PaymentTrackingMiddleware:
             f"   Session ID: {session_id[:30] + '...' if session_id and len(session_id) > 30 else session_id or 'None'}"
         )
         print(f"   X-PAYMENT header: {'Present' if x_payment_header else 'Missing'}")
+        print(f"   Payment verified: {'✅ VALID' if is_valid_payment else '❌ INVALID' if x_payment_header else 'N/A'}")
         print(f"   Session paid: {is_session_paid}")
         print(f"   Paid sessions count: {len(self.paid_sessions)}")
 
-        # Mark session as paid if valid payment header is present
+        # Mark session as paid if payment is verified
         if is_valid_payment and session_id:
             self.paid_sessions.add(session_id)
-            print("   ✅ Session marked as PAID")
+            print("   ✅ Session marked as PAID (verified)")
 
         # Determine payment status
+        # Only mark as paid if payment is verified OR session was previously verified
         payment_status = "paid" if (is_valid_payment or is_session_paid) else "unpaid"
         print(f"   Payment status: {payment_status.upper()}")
+        
+        # If payment header is present but invalid, log warning
+        if x_payment_header and not is_valid_payment and not is_session_paid:
+            print(f"   ⚠️  WARNING: Invalid payment header detected but not blocking request")
+            print(f"   ⚠️  This may indicate a security issue - payment verification failed")
 
         # Modify captured messages to inject payment requirement if unpaid
         if payment_status == "unpaid" and request_body:

@@ -379,7 +379,11 @@ export const LiquidityPaymentForm: React.FC<LiquidityPaymentFormProps> = ({
       }
 
       console.log("✅ Payment settled. Transaction:", settleData.transaction);
-      setPaymentProof(settleData.transaction);
+      
+      // Encode payment payload to base64 for X-PAYMENT header (x402 format)
+      // The X-PAYMENT header should contain the base64-encoded payment payload, not the transaction ID
+      const encodedPaymentHeader = Buffer.from(JSON.stringify(paymentPayload)).toString("base64");
+      setPaymentProof(encodedPaymentHeader);
       setPaymentStatus("completed");
 
       // Store payment payload and requirements (for reference)
@@ -387,7 +391,8 @@ export const LiquidityPaymentForm: React.FC<LiquidityPaymentFormProps> = ({
       setStoredPaymentRequirements(paymentRequirements);
 
       // Notify parent component that payment is completed
-      onPaymentComplete?.(settleData.transaction);
+      // Pass the encoded payment header (not transaction ID) for X-PAYMENT header
+      onPaymentComplete?.(encodedPaymentHeader);
 
       // Respond to orchestrator with settlement status
       respond?.({

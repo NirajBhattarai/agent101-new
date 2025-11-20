@@ -196,13 +196,17 @@ export default function ChatPage() {
           {/* Left fixed chat card (450px) */}
           <div className="w-[450px] flex-shrink-0 border-2 border-white bg-white/50 backdrop-blur-md shadow-elevation-lg flex flex-col rounded-lg overflow-hidden">
             <div className="p-6 border-b border-[#DBDBE5]">
-              <h1 className="text-2xl font-semibold text-[#010507] mb-1">DeFi Assistant</h1>
-              <p className="text-sm text-[#57575B] leading-relaxed">
+              <h1 className="text-2xl font-semibold text-[#010507] mb-2">DeFi Assistant</h1>
+              <p className="text-sm text-[#57575B] leading-relaxed mb-2">
                 Multi-Agent A2A Demo: <span className="text-purple-600 font-semibold">Balance</span>{" "}
                 + <span className="text-teal-600 font-semibold">Liquidity</span> +{" "}
-                <span className="text-green-600 font-semibold">Swap</span>
+                <span className="text-green-600 font-semibold">Swap</span> +{" "}
+                <span className="text-blue-600 font-semibold">Bridge</span> +{" "}
+                <span className="text-pink-600 font-semibold">Sentiment</span> +{" "}
+                <span className="text-amber-600 font-semibold">Trading</span> +{" "}
+                <span className="text-indigo-600 font-semibold">Token Research</span>
               </p>
-              <p className="text-xs text-[#838389] mt-1">Orchestrator-mediated A2A Protocol</p>
+              <p className="text-xs text-[#838389]">Orchestrator-mediated A2A Protocol</p>
             </div>
             <div className="flex-1 overflow-hidden">
               <DeFiChat
@@ -214,6 +218,9 @@ export default function ChatPage() {
                 onPoolCalculatorUpdate={setPoolCalculatorData}
                 onMarketInsightsUpdate={setMarketInsightsData}
                 onBridgeUpdate={handleBridgeUpdate}
+                setHeaders={(headers) => {
+                  // Headers are managed internally by DeFiChat for payment tracking
+                }}
               />
             </div>
           </div>

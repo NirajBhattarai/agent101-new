@@ -7,9 +7,6 @@
  */
 
 import React, { useState, useEffect, useCallback } from "react";
-import { useAppKitAccount, useAppKit } from "@reown/appkit/react";
-import { useWalletClient } from "wagmi";
-import { ethers } from "ethers";
 import {
   AccountId,
   Client,
@@ -23,10 +20,6 @@ import {
   PaymentPayload,
   VerifyResponse,
   SettleResponse,
-  serializeTransaction,
-  createSignableMessage,
-  signMessageWithWallet,
-  accountIdToEvmAddress,
 } from "@/lib/shared/blockchain/hedera/facilitator";
 import { PrivateKeyImport } from "../payment/PrivateKeyImport";
 import {
@@ -44,18 +37,16 @@ import { decryptPrivateKey } from "@/lib/shared/crypto/encryption";
 interface LiquidityPaymentFormProps {
   args: any;
   respond: any;
+  paymentRequirements?: PaymentRequirements | null;
   onPaymentComplete?: (paymentProof: string) => void;
 }
 
 export const LiquidityPaymentForm: React.FC<LiquidityPaymentFormProps> = ({
   args,
   respond,
+  paymentRequirements: orchestratorPaymentRequirements,
   onPaymentComplete,
 }) => {
-  const { address, isConnected } = useAppKitAccount?.() || ({} as any);
-  const { open } = useAppKit?.() || ({} as any);
-  const { data: walletClient } = useWalletClient();
-
   let parsedArgs = args;
   if (typeof args === "string") {
     try {
@@ -65,11 +56,20 @@ export const LiquidityPaymentForm: React.FC<LiquidityPaymentFormProps> = ({
     }
   }
 
-  const [network, setNetwork] = useState("hedera-testnet");
-  const [amount, setAmount] = useState("10000000"); // 0.1 HBAR in tinybars (default payment for liquidity query)
+  // Initialize state from orchestrator payment requirements if available
+  const [network, setNetwork] = useState(
+    orchestratorPaymentRequirements?.network || "hedera-testnet",
+  );
+  const [amount, setAmount] = useState(
+    orchestratorPaymentRequirements?.maxAmountRequired || "10000000",
+  ); // 0.1 HBAR in tinybars (default payment for liquidity query)
   const [payerAccountId, setPayerAccountId] = useState("");
-  const [facilitatorAccountId, setFacilitatorAccountId] = useState("");
-  const [payToAccountId, setPayToAccountId] = useState("");
+  const [facilitatorAccountId, setFacilitatorAccountId] = useState(
+    orchestratorPaymentRequirements?.extra?.feePayer || "",
+  );
+  const [payToAccountId, setPayToAccountId] = useState(
+    orchestratorPaymentRequirements?.payTo || "",
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [paymentStatus, setPaymentStatus] = useState<
@@ -141,21 +141,38 @@ export const LiquidityPaymentForm: React.FC<LiquidityPaymentFormProps> = ({
     }
   }, []);
 
-  // Fetch facilitator account ID
+  // Use orchestrator payment requirements if available, otherwise fetch from API
   useEffect(() => {
-    fetch("/api/facilitator/supported")
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.kinds && data.kinds.length > 0) {
-          const networkKind = data.kinds.find((k: any) => k.network === network);
-          if (networkKind?.extra?.feePayer) {
-            setFacilitatorAccountId(networkKind.extra.feePayer);
-            setPayToAccountId(networkKind.extra.feePayer);
+    if (orchestratorPaymentRequirements) {
+      // Use payment requirements from orchestrator
+      setNetwork(orchestratorPaymentRequirements.network);
+      setAmount(orchestratorPaymentRequirements.maxAmountRequired);
+      if (orchestratorPaymentRequirements.extra?.feePayer) {
+        setFacilitatorAccountId(orchestratorPaymentRequirements.extra.feePayer);
+      }
+      if (orchestratorPaymentRequirements.payTo) {
+        setPayToAccountId(orchestratorPaymentRequirements.payTo);
+      }
+      console.log(
+        "✅ Using payment requirements from orchestrator:",
+        orchestratorPaymentRequirements,
+      );
+    } else {
+      // Fallback: Fetch facilitator account ID from API
+      fetch("/api/facilitator/supported")
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.kinds && data.kinds.length > 0) {
+            const networkKind = data.kinds.find((k: any) => k.network === network);
+            if (networkKind?.extra?.feePayer) {
+              setFacilitatorAccountId(networkKind.extra.feePayer);
+              setPayToAccountId(networkKind.extra.feePayer);
+            }
           }
-        }
-      })
-      .catch((err) => console.error("Failed to fetch facilitator info:", err));
-  }, [network]);
+        })
+        .catch((err) => console.error("Failed to fetch facilitator info:", err));
+    }
+  }, [network, orchestratorPaymentRequirements]);
 
   const handleKeyImported = (accountId: string) => {
     setKeyImported(true);
@@ -190,47 +207,38 @@ export const LiquidityPaymentForm: React.FC<LiquidityPaymentFormProps> = ({
   };
 
   const handlePayment = async () => {
-    // Check if using private key or wallet
+    // Check if private key is imported
     const storedKey = getEncryptedKey();
-    let privateKeyToUse: string | null = null;
 
-    if (storedKey) {
-      // Using private key - need password to decrypt
-      // First try cached password
-      let passwordToUse = keyPassword || getCachedPassword();
+    if (!storedKey) {
+      setError("Please import a private key to make payments");
+      return;
+    }
 
-      if (!passwordToUse) {
-        setError("Please enter your password to decrypt the private key");
-        setShowPasswordInput(true);
-        return;
-      }
+    // Using private key - need password to decrypt
+    // First try cached password
+    let passwordToUse = keyPassword || getCachedPassword();
 
-      try {
-        privateKeyToUse = await decryptPrivateKey(storedKey.encryptedKey, passwordToUse);
-        // Cache the password for 15 minutes
-        cachePassword(passwordToUse);
-        updateLastActivity();
-        setShowPasswordInput(false);
-      } catch (err: any) {
-        // If cached password failed, clear it and ask user
-        clearPasswordCache();
-        setError("Failed to decrypt private key. Please check your password.");
-        setShowPasswordInput(true);
-        setKeyPassword("");
-        return;
-      }
-    } else {
-      // Using wallet - need wallet connection
-      if (!isConnected) {
-        open?.();
-        setError("Please connect your wallet or import a private key");
-        return;
-      }
+    if (!passwordToUse) {
+      setError("Please enter your password to decrypt the private key");
+      setShowPasswordInput(true);
+      return;
+    }
 
-      if (!walletClient) {
-        setError("Wallet not connected. Please connect your wallet.");
-        return;
-      }
+    let privateKeyToUse: string;
+    try {
+      privateKeyToUse = await decryptPrivateKey(storedKey.encryptedKey, passwordToUse);
+      // Cache the password for 15 minutes
+      cachePassword(passwordToUse);
+      updateLastActivity();
+      setShowPasswordInput(false);
+    } catch (err: any) {
+      // If cached password failed, clear it and ask user
+      clearPasswordCache();
+      setError("Failed to decrypt private key. Please check your password.");
+      setShowPasswordInput(true);
+      setKeyPassword("");
+      return;
     }
 
     if (!payerAccountId || !payToAccountId || !facilitatorAccountId) {
@@ -243,87 +251,8 @@ export const LiquidityPaymentForm: React.FC<LiquidityPaymentFormProps> = ({
     setPaymentStatus("creating");
 
     try {
-      const client = createClient(network);
-
-      // Create account ID objects - handle potential alias keys
-      let payerAccountIdObj: AccountId;
-      try {
-        payerAccountIdObj = AccountId.fromString(payerAccountId);
-      } catch (error: any) {
-        // If account ID parsing fails (e.g., alias key), provide helpful error
-        if (error.message && error.message.includes("aliasKey")) {
-          throw new Error(
-            `Account ID ${payerAccountId} appears to have an alias key. ` +
-              `Please use the numeric account ID format (0.0.xxxxx) instead of an EVM address or alias.`,
-          );
-        }
-        throw new Error(
-          `Invalid account ID format: ${payerAccountId}. Please use format 0.0.xxxxx`,
-        );
-      }
-
-      // Try to populate EVM address if needed (for accounts with alias)
-      // But don't fail if it doesn't work - we can use the account ID as-is
-      try {
-        payerAccountIdObj = await payerAccountIdObj.populateAccountEvmAddress(client);
-      } catch (e) {
-        // If population fails, use account ID as-is (this is fine for most cases)
-        console.log(
-          `⚠️ Could not populate EVM address for ${payerAccountId}, using account ID directly`,
-        );
-      }
-
-      const facilitatorAccountIdObj = AccountId.fromString(facilitatorAccountId);
-      const toAccountIdObj = AccountId.fromString(payToAccountId);
-
-      // Create transaction
-      const transaction = createHbarTransferTransaction(
-        payerAccountIdObj,
-        toAccountIdObj,
-        facilitatorAccountIdObj,
-        amount,
-        client,
-      );
-
-      const transactionId = transaction.transactionId!.toString();
-      console.log("✅ Transaction created. Transaction ID:", transactionId);
-
-      // Sign transaction with private key or wallet
-      let signedTransactionBytes: string;
-      let walletSignature: string | undefined;
-      let walletAddress: string | undefined;
-      let signedMessage: string | undefined;
-
-      if (privateKeyToUse) {
-        // Sign with private key
-        console.log("📝 Signing transaction with private key...");
-        const hederaPrivateKey = PrivateKey.fromStringECDSA(privateKeyToUse);
-        const signedTransaction = await transaction.sign(hederaPrivateKey);
-        signedTransactionBytes = Buffer.from(signedTransaction.toBytes()).toString("base64");
-        console.log("✅ Transaction signed with private key");
-      } else {
-        // Sign with wallet (original flow)
-        walletAddress = address || "";
-        signedMessage = createSignableMessage(
-          network,
-          payerAccountId,
-          payToAccountId,
-          amount,
-          "0.0.0", // HBAR
-          transactionId,
-        );
-
-        // Sign message with wallet
-        const provider = new ethers.BrowserProvider(walletClient as any);
-        walletSignature = await signMessageWithWallet(provider, signedMessage);
-        console.log("✅ Message signed with wallet");
-
-        // Serialize unsigned transaction for wallet flow
-        signedTransactionBytes = Buffer.from(transaction.toBytes()).toString("base64");
-      }
-
-      // Create payment requirements
-      const paymentRequirements: PaymentRequirements = {
+      // Use orchestrator payment requirements if available, otherwise create new ones
+      const paymentRequirements: PaymentRequirements = orchestratorPaymentRequirements || {
         scheme: "exact",
         network,
         maxAmountRequired: amount,
@@ -338,23 +267,67 @@ export const LiquidityPaymentForm: React.FC<LiquidityPaymentFormProps> = ({
         },
       };
 
-      // Step 1: Create payment payload
+      if (orchestratorPaymentRequirements) {
+        console.log("✅ Using payment requirements from orchestrator:", paymentRequirements);
+      } else {
+        console.log("⚠️ Using fallback payment requirements (orchestrator requirements not found)");
+      }
+
+      // Update form state from payment requirements
+      if (paymentRequirements.network) setNetwork(paymentRequirements.network);
+      if (paymentRequirements.maxAmountRequired) setAmount(paymentRequirements.maxAmountRequired);
+      if (paymentRequirements.payTo) setPayToAccountId(paymentRequirements.payTo);
+      if (paymentRequirements.extra?.feePayer)
+        setFacilitatorAccountId(paymentRequirements.extra.feePayer);
+
+      // Create Hedera client and transaction
+      const client = createClient(paymentRequirements.network);
+      let payerAccountIdObj: AccountId;
+      try {
+        payerAccountIdObj = AccountId.fromString(payerAccountId);
+        try {
+          payerAccountIdObj = await payerAccountIdObj.populateAccountEvmAddress(client);
+        } catch (e) {
+          console.log(
+            `⚠️ Could not populate EVM address for ${payerAccountId}, using account ID directly`,
+          );
+        }
+      } catch (error: any) {
+        throw new Error(
+          `Invalid account ID format: ${payerAccountId}. Please use format 0.0.xxxxx`,
+        );
+      }
+
+      const facilitatorAccountIdObj = AccountId.fromString(paymentRequirements.extra!.feePayer!);
+      const toAccountIdObj = AccountId.fromString(paymentRequirements.payTo);
+
+      const transaction = createHbarTransferTransaction(
+        payerAccountIdObj,
+        toAccountIdObj,
+        facilitatorAccountIdObj,
+        paymentRequirements.maxAmountRequired,
+        client,
+      );
+
+      const transactionId = transaction.transactionId!.toString();
+      console.log("✅ Transaction created. Transaction ID:", transactionId);
+
+      // Sign with private key using Hedera SDK
+      console.log("📝 Signing transaction with private key (Hedera SDK)...");
+      const hederaPrivateKey = PrivateKey.fromStringECDSA(privateKeyToUse);
+      const signedTransaction = await transaction.sign(hederaPrivateKey);
+      const signedTransactionBytes = Buffer.from(signedTransaction.toBytes()).toString("base64");
+      console.log("✅ Transaction signed with private key");
+
+      // Step 1: Create payment payload via API
       setPaymentStatus("creating");
       const createPayloadBody: any = {
         paymentRequirements,
         payerAccountId,
         transactionBytes: signedTransactionBytes,
         transactionId,
+        payerPrivateKey: privateKeyToUse,
       };
-
-      // Add private key or wallet signature based on flow
-      if (privateKeyToUse) {
-        createPayloadBody.payerPrivateKey = privateKeyToUse;
-      } else {
-        createPayloadBody.walletSignature = walletSignature;
-        createPayloadBody.walletAddress = walletAddress;
-        createPayloadBody.signedMessage = signedMessage;
-      }
 
       const createPayloadResponse = await fetch("/api/facilitator/create-payload", {
         method: "POST",
@@ -362,26 +335,28 @@ export const LiquidityPaymentForm: React.FC<LiquidityPaymentFormProps> = ({
         body: JSON.stringify(createPayloadBody),
       });
 
+      debugger;
+
       if (!createPayloadResponse.ok) {
         const errorData = await createPayloadResponse.json();
         throw new Error(errorData.error || "Failed to create payment payload");
       }
 
-      const { paymentPayload } = await createPayloadResponse.json();
+      const responseData = await createPayloadResponse.json();
+      const paymentPayload: PaymentPayload = responseData.paymentPayload;
       console.log("✅ Payment payload created");
 
       // Step 2: Verify payment
       setPaymentStatus("verifying");
+      const verifyBody: any = {
+        paymentPayload,
+        paymentRequirements,
+      };
+
       const verifyResponse = await fetch("/api/facilitator/verify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          paymentPayload,
-          paymentRequirements,
-          walletSignature,
-          walletAddress,
-          signedMessage,
-        }),
+        body: JSON.stringify(verifyBody),
       });
 
       if (!verifyResponse.ok) {
@@ -602,43 +577,33 @@ export const LiquidityPaymentForm: React.FC<LiquidityPaymentFormProps> = ({
           </div>
         )}
 
-        {!keyImported && !isConnected && (
+        {!keyImported && (
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
             <p className="text-xs text-yellow-800">
-              ⚠️ Import a private key above or connect your wallet to proceed.
+              ⚠️ Import a private key above to proceed with payment.
             </p>
           </div>
         )}
 
-        <div className="flex items-center gap-2">
-          <button
-            onClick={handlePayment}
-            disabled={loading || !payerAccountId || (!keyImported && !isConnected)}
-            className={`flex-1 py-2.5 px-4 text-sm font-semibold rounded-lg transition-all shadow-elevation-md ${
-              loading || !payerAccountId || (!keyImported && !isConnected)
-                ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                : "bg-yellow-500 hover:bg-yellow-600 text-white shadow-elevation-lg"
-            }`}
-          >
-            {loading ? (
-              <span>
-                {paymentStatus === "creating" && "Signing Payment..."}
-                {paymentStatus === "verifying" && "Verifying Payment..."}
-                {paymentStatus === "settling" && "Settling Payment..."}
-              </span>
-            ) : (
-              `Sign & Verify Payment (${parseInt(amount) / 100000000} HBAR)`
-            )}
-          </button>
-          {!keyImported && !isConnected && (
-            <button
-              onClick={() => open?.()}
-              className="px-4 py-2.5 text-sm font-semibold bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-all"
-            >
-              Connect Wallet
-            </button>
+        <button
+          onClick={handlePayment}
+          disabled={loading || !payerAccountId || !keyImported}
+          className={`w-full py-2.5 px-4 text-sm font-semibold rounded-lg transition-all shadow-elevation-md ${
+            loading || !payerAccountId || !keyImported
+              ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+              : "bg-yellow-500 hover:bg-yellow-600 text-white shadow-elevation-lg"
+          }`}
+        >
+          {loading ? (
+            <span>
+              {paymentStatus === "creating" && "Signing Payment..."}
+              {paymentStatus === "verifying" && "Verifying Payment..."}
+              {paymentStatus === "settling" && "Settling Payment..."}
+            </span>
+          ) : (
+            `Sign & Verify Payment (${parseInt(amount) / 100000000} HBAR)`
           )}
-        </div>
+        </button>
       </div>
     </div>
   );

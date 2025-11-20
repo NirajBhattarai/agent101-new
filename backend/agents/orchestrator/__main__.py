@@ -140,8 +140,34 @@ class PaymentTrackingMiddleware:
                         system_msg = body_json["messages"][system_message_idx]
                         original_content = system_msg.get("content", "")
 
+                        # Create payment requirements in x402 format
+                        # These will be parsed by the frontend from the orchestrator response
+                        payment_requirements = {
+                            "x402Version": 1,
+                            "error": "Payment required to access this resource",
+                            "accepts": [
+                                {
+                                    "scheme": "exact",
+                                    "network": "hedera-testnet",
+                                    "maxAmountRequired": "10000000",  # 0.1 HBAR in tinybars
+                                    "asset": "0.0.0",  # HBAR
+                                    "payTo": os.getenv("HEDERA_FACILITATOR_ACCOUNT_ID", "0.0.0"),
+                                    "resource": "agent101-orchestrator",
+                                    "description": "Payment required for DeFi agent services",
+                                    "mimeType": "application/json",
+                                    "outputSchema": None,
+                                    "maxTimeoutSeconds": 60,
+                                    "extra": {
+                                        "feePayer": os.getenv(
+                                            "HEDERA_FACILITATOR_ACCOUNT_ID", "0.0.0"
+                                        ),
+                                    },
+                                }
+                            ],
+                        }
+
                         # Prepend payment requirement to system message - MAKE IT EXTREMELY PROMINENT
-                        payment_instruction = """🚨🚨🚨 CRITICAL PAYMENT REQUIREMENT - READ THIS FIRST 🚨🚨🚨
+                        payment_instruction = f"""🚨🚨🚨 CRITICAL PAYMENT REQUIREMENT - READ THIS FIRST 🚨🚨🚨
 
 **THIS SESSION HAS NOT PAID YET. YOU MUST REQUEST PAYMENT BEFORE DOING ANYTHING ELSE.**
 
@@ -158,11 +184,30 @@ class PaymentTrackingMiddleware:
 
 After payment is completed, then you can proceed with the user's original request.
 
+**PAYMENT REQUIREMENTS (x402 FORMAT):**
+You MUST include the following payment requirements JSON in your response when calling gather_payment or when the user asks about payment:
+
+```json
+{json.dumps(payment_requirements, indent=2)}
+```
+
+This payment requirements JSON must be included in your response so the frontend can parse it and use it for payment processing.
+
 ================================================================================
 
 """
                         system_msg["content"] = payment_instruction + original_content
                         body_json["messages"][system_message_idx] = system_msg
+
+                        # Also store payment requirements in a way the agent can access
+                        # Add payment requirements as a separate assistant message that the agent can reference
+                        payment_req_msg = {
+                            "id": f"payment-requirements-{uuid.uuid4().hex[:8]}",
+                            "role": "assistant",
+                            "content": f"Payment Requirements (x402 format):\n```json\n{json.dumps(payment_requirements, indent=2)}\n```",
+                        }
+                        # Insert after system message, before payment user message
+                        body_json["messages"].insert(1, payment_req_msg)
 
                         # ALSO inject a user message that explicitly requires payment
                         # Insert it right after the system message, before the actual user message

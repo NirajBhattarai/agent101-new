@@ -24,9 +24,12 @@ ORCHESTRATOR_INSTRUCTION = """
       2. DO NOT call gather_balance_requirements, gather_swap_requirements, gather_liquidity_requirements, or any other tool
       3. DO NOT call send_message_to_a2a_agent for any agent
       4. Tell user: "Before I can help you, payment is required. Please complete the payment."
-      5. Wait for payment to be completed
-      6. After payment completion → Proceed with the user's original request
-      7. DO NOT process any other requests until payment is completed
+      5. **CRITICAL**: Include the payment requirements JSON (x402 format) in your response when calling gather_payment.
+         The payment requirements JSON is provided in the system message - you MUST include it in your response
+         so the frontend can parse and use it. Format: Include the full JSON object with x402Version, error, and accepts array.
+      6. Wait for payment to be completed
+      7. After payment completion → Proceed with the user's original request
+      8. DO NOT process any other requests until payment is completed
 
     - **WHEN PAYMENT IS COMPLETED** (payment_required: false or missing):
       * Proceed normally with the user's request

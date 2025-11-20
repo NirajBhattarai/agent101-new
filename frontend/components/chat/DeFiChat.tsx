@@ -36,6 +36,7 @@ import type {
   MessageActionRenderProps,
 } from "@/types";
 import { transformLiquidityResponse } from "@/utils/liquidityTransformer";
+import { parsePaymentRequirementsFromMessages } from "@/lib/shared/blockchain/hedera/facilitator";
 
 const ChatInner = ({
   onTokenResearchUpdate,
@@ -50,9 +51,19 @@ const ChatInner = ({
 }: DeFiChatProps) => {
   const { visibleMessages } = useCopilotChat();
 
+  // State to store parsed payment requirements from orchestrator
+  const [parsedPaymentRequirements, setParsedPaymentRequirements] = useState<any>(null);
+
   // Extract structured data from A2A agent responses
   useEffect(() => {
     const extractDataFromMessages = () => {
+      // First, try to parse payment requirements from all messages
+      const paymentReqs = parsePaymentRequirementsFromMessages(visibleMessages);
+      if (paymentReqs && paymentReqs !== parsedPaymentRequirements) {
+        setParsedPaymentRequirements(paymentReqs);
+        console.log("💰 Found payment requirements in orchestrator messages:", paymentReqs);
+      }
+
       for (const message of visibleMessages) {
         const msg = message as any;
 
@@ -405,10 +416,16 @@ const ChatInner = ({
       },
     ],
     renderAndWaitForResponse: ({ args, respond }) => {
+      // Use parsed payment requirements from state, or parse from messages as fallback
+      const paymentRequirements =
+        parsedPaymentRequirements || parsePaymentRequirementsFromMessages(visibleMessages);
+      console.log("💰 Using payment requirements for payment form:", paymentRequirements);
+
       return (
         <LiquidityPaymentForm
           args={args}
           respond={respond}
+          paymentRequirements={paymentRequirements}
           onPaymentComplete={(paymentProof) => {
             setHeaders({
               "X-PAYMENT": paymentProof,

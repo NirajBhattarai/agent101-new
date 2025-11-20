@@ -589,7 +589,10 @@ export default function DeFiChat({
 }: DeFiChatProps) {
   const [headers, setHeaders] = useState<Record<string, string>>({});
   return (
-    <CopilotKit runtimeUrl="/api/copilotkit" showDevConsole={false} agent="a2a_chat" headers={headers}>
+    <CopilotKit runtimeUrl="/api/copilotkit" showDevConsole={false} agent="a2a_chat" headers={headers} onError={(errorEvent) => {
+      // Send to your monitoring/analytics service
+      console.error("CopilotKit Error:", errorEvent);
+    }} >
       <ChatInner
         onTokenResearchUpdate={onTokenResearchUpdate}
         onBalanceUpdate={onBalanceUpdate}

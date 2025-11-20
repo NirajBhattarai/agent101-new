@@ -18,7 +18,9 @@ from a2a.server.request_handlers import DefaultRequestHandler
 from a2a.server.tasks import InMemoryTaskStore
 from a2a.types import AgentCapabilities, AgentCard, AgentSkill
 
+from .core.logger import log_agent_message  # noqa: E402
 from .executor import LiquidityExecutor  # noqa: E402
+
 
 # Railway uses PORT env var, fallback to LIQUIDITY_PORT or default
 port = int(os.getenv("PORT", os.getenv("LIQUIDITY_PORT", 9998)))
@@ -91,10 +93,14 @@ def main():
         extended_agent_card=public_agent_card,
     )
 
+    # Build the base app
+    app = server.build()
+
     print(f"💧 Starting Multi-Chain Liquidity Agent (ADK + A2A) on http://0.0.0.0:{port}")
     print(f"   Agent: {public_agent_card.name}")
     print(f"   Description: {public_agent_card.description}")
-    uvicorn.run(server.build(), host="0.0.0.0", port=port)
+    log_agent_message("Multichain Liquidity Agent started")
+    uvicorn.run(app, host="0.0.0.0", port=port)
 
 
 if __name__ == "__main__":

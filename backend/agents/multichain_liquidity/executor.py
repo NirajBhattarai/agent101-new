@@ -38,22 +38,35 @@ def _get_session_id(context: RequestContext) -> str:
 
 def _extract_and_print_x_payment_header(context: RequestContext) -> None:
     """Extract and print X-PAYMENT header value from Hedera payment."""
-    x_payment_header = None
+    # Print request object (from context._params if available)
+    print("🔍 Request Object:")
+    if hasattr(context, "_params") and context._params:
+        print(f"   Request params: {context._params}")
+        print(f"   Request params type: {type(context._params)}")
+        if hasattr(context._params, "metadata"):
+            print(f"   Request params metadata: {context._params.metadata}")
     
-    if hasattr(context, "request") and context.request:
-        if hasattr(context.request, "headers"):
-            headers = context.request.headers
-            if isinstance(headers, dict):
-                x_payment_header = headers.get("X-PAYMENT") or headers.get("x-payment")
-            elif isinstance(headers, list):
-                for key, value in headers:
-                    if isinstance(key, bytes):
-                        key = key.decode('utf-8')
-                    if isinstance(value, bytes):
-                        value = value.decode('utf-8')
-                    if key.lower() == "x-payment":
-                        x_payment_header = value
-                        break
+    # Check call_context.state for headers
+    x_payment_header = None
+    if hasattr(context, "call_context") and context.call_context:
+        print(f"🔍 Call Context State: {context.call_context.state}")
+        if isinstance(context.call_context.state, dict):
+            if "headers" in context.call_context.state:
+                headers = context.call_context.state["headers"]
+                print(f"   Headers from call_context.state: {headers}")
+                if isinstance(headers, dict):
+                    x_payment_header = headers.get("X-PAYMENT") or headers.get("x-payment")
+            # Also check if X-PAYMENT is directly in state
+            x_payment_header = x_payment_header or context.call_context.state.get("X-PAYMENT") or context.call_context.state.get("x-payment")
+    
+    # Check metadata for headers
+    if not x_payment_header and hasattr(context, "metadata") and context.metadata:
+        if isinstance(context.metadata, dict):
+            if "headers" in context.metadata:
+                headers = context.metadata["headers"]
+                if isinstance(headers, dict):
+                    x_payment_header = headers.get("X-PAYMENT") or headers.get("x-payment")
+            x_payment_header = x_payment_header or context.metadata.get("X-PAYMENT") or context.metadata.get("x-payment")
     
     if x_payment_header:
         print(f"💰 X-PAYMENT Header Value (Hedera): {x_payment_header}")
@@ -108,6 +121,7 @@ class LiquidityExecutor(AgentExecutor):
         print(
             f"   Timestamp: {context.get_timestamp() if hasattr(context, 'get_timestamp') else 'N/A'}"
         )
+        
         _extract_and_print_x_payment_header(context)
         print()
 

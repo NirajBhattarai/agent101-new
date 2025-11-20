@@ -21,10 +21,11 @@ export async function POST(request: NextRequest) {
   const orchestratorUrl = process.env.ORCHESTRATOR_URL || "http://localhost:9000";
 
   // STEP 3: Extract X-PAYMENT header and wrap orchestrator with HttpAgent (AG-UI client)
-  const xPaymentHeader = request.headers.get("X-PAYMENT") || request.headers.get("x-payment");
+  const xPaymentHeader = request.headers.get("X-PAYMENT") || request.headers.get("x-payment")|| "testing";
   const orchestrationAgent = new HttpAgent({ 
     url: orchestratorUrl, 
-    headers: xPaymentHeader ? { 'X-PAYMENT': xPaymentHeader } : {} 
+    // headers: xPaymentHeader ? { 'X-PAYMENT': xPaymentHeader } : {} 
+    headers: { 'X-PAYMENT': "testing" }
   });
 
   // STEP 4: Create A2A Middleware Agent
@@ -33,6 +34,7 @@ export async function POST(request: NextRequest) {
   // 2. Registering all A2A agents
   // 3. Injecting send_message_to_a2a_agent tool
   // 4. Routing messages between orchestrator and A2A agents
+  // Forward X-PAYMENT header to A2A agents when orchestrator calls them
   const a2aMiddlewareAgent = new A2AMiddlewareAgent({
     description:
       "DeFi orchestrator with balance, multi-chain liquidity, pool calculator, swap, swap router, bridge, sentiment, trading, and token research agents (Hedera, Polygon, Ethereum)",
@@ -45,6 +47,8 @@ export async function POST(request: NextRequest) {
       tokenResearchAgentUrl, // Token Research Agent (A2A) - Port 10002
     ],
     orchestrationAgent,
+    // Forward X-PAYMENT header from orchestrator request to A2A agents
+    // ...(xPaymentHeader ? { headers: { 'X-PAYMENT': xPaymentHeader } } : {}),
     instructions: `
       You are a DeFi orchestrator that coordinates specialized agents to fetch and aggregate on-chain balance, liquidity, and swap information across chains (Ethereum, Polygon, Hedera).
 
@@ -328,6 +332,7 @@ export async function POST(request: NextRequest) {
     `,
   });
 
+
   const runtime = new CopilotRuntime({
     agents: { a2a_chat: a2aMiddlewareAgent as any },
   });
@@ -336,6 +341,7 @@ export async function POST(request: NextRequest) {
     runtime,
     serviceAdapter: new ExperimentalEmptyAdapter(),
     endpoint: "/api/copilotkit",
+    logLevel: "debug",
   });
 
   return handleRequest(request);

@@ -152,16 +152,44 @@ make backend-install
 
 **Frontend** (`.env.local`):
 ```bash
+# Required: Get your project ID from https://cloud.reown.com
 NEXT_PUBLIC_REOWN_PROJECT_ID=your_project_id
+
+# Optional: For payment facilitator functionality
 HEDERA_FACILITATOR_ACCOUNT_ID=0.0.xxxxx
 HEDERA_FACILITATOR_PRIVATE_KEY=your_private_key
+
+# Optional: Agent URLs (defaults shown)
+ORCHESTRATOR_URL=http://localhost:9000
+BALANCE_AGENT_URL=http://localhost:9997
+SWAP_AGENT_URL=http://localhost:9999
+MULTICHAIN_LIQUIDITY_AGENT_URL=http://localhost:9998
+SENTIMENT_AGENT_URL=http://localhost:10000
+TRADING_AGENT_URL=http://localhost:10001
+TOKEN_RESEARCH_AGENT_URL=http://localhost:10002
 ```
 
 **Backend** (`.env`):
 ```bash
+# Required: Get your API key from https://aistudio.google.com/app/apikey
 GOOGLE_API_KEY=your_google_api_key
+# OR use GEMINI_API_KEY (alternative)
+# GEMINI_API_KEY=your_gemini_api_key
+
+# Optional: Model configuration
 GEMINI_MODEL=gemini-2.5-pro
+
+# Optional: Agent ports (defaults shown)
+ORCHESTRATOR_PORT=9000
+BALANCE_AGENT_PORT=9997
+LIQUIDITY_AGENT_PORT=9998
+SWAP_AGENT_PORT=9999
+SENTIMENT_AGENT_PORT=10000
+TRADING_AGENT_PORT=10001
+TOKEN_RESEARCH_AGENT_PORT=10002
 ```
+
+> **Note**: Copy `.env.example` files (if available) or create `.env.local` (frontend) and `.env` (backend) files with the above variables.
 
 ### Running the Application
 
@@ -181,12 +209,13 @@ make frontend-dev
 # Terminal 1: Orchestrator
 cd backend && uv run -m agents.orchestrator
 
-# Terminal 2-6: Specialized Agents
+# Terminal 2-7: Specialized Agents
 cd backend && uv run -m agents.balance
 cd backend && uv run -m agents.multichain_liquidity
 cd backend && uv run -m agents.swap
 cd backend && uv run -m agents.sentiment
 cd backend && uv run -m agents.trading
+cd backend && uv run -m agents.token_research
 ```
 
 2. **Start Frontend**:
@@ -415,6 +444,7 @@ make backend-test-coverage           # With coverage
 - [Backend README](./backend/README.md) - Backend architecture and agent details
 - [Frontend README](./frontend/README.md) - Frontend architecture and features
 - [Orchestrator README](./backend/agents/orchestrator/README.md) - Orchestrator agent details
+- [Contributing Guide](./CONTRIBUTING.md) - Guidelines for contributing to the project
 
 ## 🔌 API Endpoints
 
@@ -428,11 +458,13 @@ make backend-test-coverage           # With coverage
 - **Swap Agent**: `http://localhost:9999/`
 - **Sentiment Agent**: `http://localhost:10000/`
 - **Trading Agent**: `http://localhost:10001/`
-- **Token Research Agent**: Available via orchestrator
+- **Token Research Agent**: `http://localhost:10002/`
 
 ### Frontend API Routes
-- **Orchestrator Proxy**: `/api/orchestrator`
-- **Payment Facilitator**: `/api/facilitator/*`
+- **CopilotKit Route**: `/api/copilotkit` - Main chat interface (connects to orchestrator)
+- **Payment Facilitator**: `/api/facilitator/*` - Payment verification and settlement
+
+> **Note**: The orchestrator API route (`/api/orchestrator`) is mentioned in some documentation but is not currently implemented. The frontend uses `/api/copilotkit` which directly connects to the orchestrator via AG-UI Protocol.
 
 ## 🌐 Supported Blockchains
 
@@ -440,12 +472,37 @@ make backend-test-coverage           # With coverage
 - **Polygon**: Uniswap V3, ERC-20 tokens
 - **Hedera**: SaucerSwap, HTS tokens, HBAR
 
+## ⚠️ Implementation Notes
+
+### Agent Architecture
+The platform uses a multi-agent architecture with the following implementations:
+
+**Implemented as Separate Agents** (A2A Protocol):
+- Balance Agent (Port 9997)
+- Multi-Chain Liquidity Agent (Port 9998)
+- Swap Agent (Port 9999)
+- Sentiment Agent (Port 10000)
+- Trading Agent (Port 10001)
+- Token Research Agent (Port 10002)
+
+**Handled by Orchestrator** (not separate agents):
+- Bridge functionality - Frontend components exist, but bridge logic is handled by the orchestrator
+- Swap Router - Frontend components exist, but routing logic is handled by the orchestrator
+- Pool Calculator - Frontend components exist, but calculations are handled client-side or by orchestrator
+- Market Insights - Frontend components exist, but insights are provided by orchestrator/sentiment agent
+
+> **Note**: Some features (Bridge, Swap Router, Pool Calculator, Market Insights) have frontend UI components but are implemented as orchestrator capabilities rather than separate A2A agents. This is by design for simpler architecture.
+
 ## 🤝 Contributing
 
+We welcome contributions! Please see our [Contributing Guide](./CONTRIBUTING.md) for detailed guidelines.
+
+Quick checklist:
 1. Follow the existing code structure
 2. Maintain separation of concerns (agents, packages, frontend)
 3. Write tests for new features
 4. Update documentation
+
 
 ## 📝 License
 
